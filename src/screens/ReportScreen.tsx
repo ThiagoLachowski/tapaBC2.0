@@ -11,13 +11,16 @@ import {
   Image,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { theme } from '../theme/tokens';
 import { BeamButton } from '../components/BeamButton';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
+import { LeafletMap } from '../components/LeafletMap';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Severity = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
@@ -153,6 +156,8 @@ export const ReportScreen = () => {
   const [description, setDesc]    = useState('');
   const [severity, setSeverity]   = useState<Severity | null>(null);
   const [images, setImages]       = useState<string[]>([]);
+  const [location, setLocation]   = useState<{ lat: number, lng: number } | null>(null);
+  const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -173,6 +178,20 @@ export const ReportScreen = () => {
     if (!result.canceled) {
       setImages([...images, result.assets[0].uri]);
     }
+  };
+
+  const getMyLocation = async () => {
+    setLoadingLoc(true);
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Erro', 'Permissão de localização negada.');
+      setLoadingLoc(false);
+      return;
+    }
+
+    let loc = await Location.getCurrentPositionAsync({});
+    setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    setLoadingLoc(false);
   };
 
   const goToStep = (s: number) => {
@@ -197,11 +216,13 @@ export const ReportScreen = () => {
       severity,
       severityColor: sevObj.color,
       images,
+      latitude: location?.lat,
+      longitude: location?.lng,
     });
     goToStep(2);
   };
 
-  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setStep(0); }} />;
+  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setLocation(null); setStep(0); }} />;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -230,14 +251,22 @@ export const ReportScreen = () => {
           {step === 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>📍 Onde é o buraco?</Text>
+              
+              <Text style={styles.inputLabel}>Toque no mapa para marcar ou use GPS</Text>
+              <View style={styles.mapSelectionContainer}>
+                <LeafletMap 
+                  center={location || { lat: -4.8622, lng: -43.3561 }}
+                  markers={location ? [{ lat: location.lat, lng: location.lng, color: theme.colors.primary }] : []}
+                  onLocationSelect={(lat, lng) => setLocation({ lat, lng })}
+                />
+                <Pressable style={styles.gpsBtn} onPress={getMyLocation} disabled={loadingLoc}>
+                  {loadingLoc ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={{ fontSize: 20 }}>🎯</Text>}
+                </Pressable>
+              </View>
+
               <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} />
               <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} />
-              <View style={styles.mapMini}>
-                <View style={styles.mapMiniContent}>
-                  <Text style={styles.mapMiniText}>📌 Localização automática ativada</Text>
-                  <Text style={styles.mapMiniSub}>(Caxias, Maranhão)</Text>
-                </View>
-              </View>
+              
               <BeamButton title="Próximo →" isPrimary style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
             </View>
           )}
@@ -306,10 +335,10 @@ const styles = StyleSheet.create({
   inputLabel:    { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   input:         { backgroundColor: theme.colors.surface2, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.textPrimary, paddingHorizontal: theme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: theme.typography.fontFamily.regular },
   inputMulti:    { height: 100 },
-  mapMini:       { height: 90, backgroundColor: theme.colors.surface2, borderRadius: theme.radii.lg, borderWidth: 1, borderColor: theme.colors.border, justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed' },
-  mapMiniContent:{ alignItems: 'center' },
-  mapMiniText:   { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 13 },
-  mapMiniSub:    { color: theme.colors.textMuted, fontSize: 11, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
+  
+  mapSelectionContainer: { height: 200, borderRadius: theme.radii.lg, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border, marginBottom: theme.spacing.sm, position: 'relative' },
+  gpsBtn: { position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+
   severityGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   severityOption:{ flex: 1, minWidth: '40%', alignItems: 'center', padding: theme.spacing.sm, borderRadius: theme.radii.md, borderWidth: 1.5, gap: 4 },
   severityOptionText: { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },

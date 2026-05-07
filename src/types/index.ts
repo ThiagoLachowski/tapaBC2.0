@@ -24,4 +24,6 @@ export interface Report {
   comments: number;
   createdAt: string; // ISO string
   images: string[];
+  latitude?: number;
+  longitude?: number;
 }

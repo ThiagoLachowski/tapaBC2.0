@@ -9,9 +9,10 @@ import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
+import { LeafletMap } from '../components/LeafletMap';
 
 const { width } = Dimensions.get('window');
-const CARD_IMAGE_WIDTH = width - (theme.spacing.lg * 2) - (theme.spacing.md * 2) - 20; // Largura do card menos paddings e o dot lateral
+const CARD_IMAGE_WIDTH = width - (theme.spacing.lg * 2) - (theme.spacing.md * 2) - 20;
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, delay }: { label: string; value: string | number; icon: string; delay: number }) {
@@ -25,41 +26,6 @@ function StatCard({ label, value, icon, delay }: { label: string; value: string 
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
-  );
-}
-
-// ── Map placeholder ───────────────────────────────────────────────────────────
-function MapPlaceholder({ pins }: { pins: { color: string }[] }) {
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.2, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      Animated.timing(pulse, { toValue: 1,   duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-    ])).start();
-  }, [pulse]);
-
-  const PIN_POS = [
-    { x: '18%', y: '30%' }, { x: '52%', y: '18%' }, { x: '72%', y: '55%' },
-    { x: '33%', y: '65%' }, { x: '80%', y: '28%' },
-  ];
-
-  return (
-    <View style={styles.mapContainer}>
-      <LinearGradient colors={['#111', '#0a0a0a']} style={StyleSheet.absoluteFillObject} />
-      {[...Array(7)].map((_,i) => <View key={`h${i}`} style={[styles.mapGrid, { top: `${13*i+5}%` as any, left: 0, right: 0, height: 1 }]} />)}
-      {[...Array(5)].map((_,i) => <View key={`v${i}`} style={[styles.mapGrid, { left: `${20*i+5}%` as any, top: 0, bottom: 0, width: 1 }]} />)}
-      {pins.slice(0,5).map((p, i) => (
-        <Animated.View
-          key={i}
-          style={[styles.mapPin, { left: PIN_POS[i]?.x as any, top: PIN_POS[i]?.y as any, backgroundColor: p.color }, i===0 && { transform: [{ scale: pulse }] }]}
-        />
-      ))}
-      <View style={styles.mapLabel}><Text style={styles.mapLabelText}>🗺  Caxias, MA</Text></View>
-      <View style={styles.liveBadge}>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>Ao vivo</Text>
-      </View>
-    </View>
   );
 }
 
@@ -111,15 +77,17 @@ export const HomeScreen = () => {
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-    
-    // Auto-refresh every 30s
     const interval = setInterval(() => setTicker(t => t + 1), 30000);
     return () => clearInterval(interval);
   }, [headerAnim]);
 
   const resolved = reports.filter(r => r.status === 'Resolvido').length;
   const analyzing = reports.filter(r => r.status === 'Em análise').length;
-  const pins = reports.map(r => ({ color: r.severityColor }));
+  
+  // Transform reports into markers
+  const markers = reports
+    .filter(r => r.latitude && r.longitude)
+    .map(r => ({ lat: r.latitude!, lng: r.longitude!, color: r.severityColor }));
 
   if (!user) return null;
 
@@ -141,8 +109,10 @@ export const HomeScreen = () => {
           <StatCard icon="✅" label="Resolvidos"  value={resolved}         delay={300} />
         </View>
 
-        <Text style={styles.sectionTitle}>Mapa da cidade</Text>
-        <MapPlaceholder pins={pins} />
+        <Text style={styles.sectionTitle}>Mapa da cidade (Leaflet)</Text>
+        <View style={styles.mapContainer}>
+          <LeafletMap markers={markers} interactive={false} />
+        </View>
 
         <Text style={styles.sectionTitle}>
           Reportes recentes{reports.length > 0 ? ` (${reports.length})` : ''}
@@ -171,14 +141,7 @@ const styles = StyleSheet.create({
   statValue:   { fontSize: 20, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
   statLabel:   { fontSize: 10, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 2, textAlign: 'center' },
   sectionTitle:{ fontSize: 15, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.sm },
-  mapContainer:{ marginHorizontal: theme.spacing.lg, height: 200, borderRadius: theme.radii.xl, overflow: 'hidden', marginBottom: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, position: 'relative' },
-  mapGrid:     { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.04)' },
-  mapPin:      { position: 'absolute', width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#000' },
-  mapLabel:    { position: 'absolute', bottom: 10, left: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radii.full },
-  mapLabelText:{ color: theme.colors.textPrimary, fontSize: 11, fontFamily: theme.typography.fontFamily.medium },
-  liveBadge:   { position: 'absolute', top: 10, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: theme.radii.full, gap: 5 },
-  liveDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
-  liveText:    { color: '#22C55E', fontSize: 10, fontFamily: theme.typography.fontFamily.medium },
+  mapContainer:{ marginHorizontal: theme.spacing.lg, height: 250, borderRadius: theme.radii.xl, overflow: 'hidden', marginBottom: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, position: 'relative', backgroundColor: '#0a0a0a' },
   reportsList: { marginHorizontal: theme.spacing.lg, gap: theme.spacing.sm },
   reportRow:   { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: theme.colors.surface1, borderRadius: theme.radii.lg, padding: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.sm },
   dot:         { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
