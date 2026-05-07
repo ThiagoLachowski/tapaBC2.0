@@ -3,7 +3,7 @@ import { Report } from '../types';
 
 interface ReportsContextType {
   reports: Report[];
-  addReport: (r: Omit<Report, 'id' | 'status' | 'votes' | 'comments' | 'createdAt' | 'timeAgo'>) => void;
+  addReport: (r: Omit<Report, 'id' | 'status' | 'votes' | 'comments' | 'createdAt'>) => void;
   voteReport: (id: string) => void;
 }
 
@@ -12,7 +12,7 @@ const ReportsContext = createContext<ReportsContextType | null>(null);
 export function ReportsProvider({ children }: { children: ReactNode }) {
   const [reports, setReports] = useState<Report[]>([]);
 
-  const addReport = (r: Omit<Report, 'id' | 'status' | 'votes' | 'comments' | 'createdAt' | 'timeAgo'>) => {
+  const addReport = (r: Omit<Report, 'id' | 'status' | 'votes' | 'comments' | 'createdAt'>) => {
     const newReport: Report = {
       ...r,
       id: String(Date.now()),
@@ -20,7 +20,6 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       votes: 0,
       comments: 0,
       createdAt: new Date().toISOString(),
-      timeAgo: 'agora mesmo',
     };
     setReports(prev => [newReport, ...prev]);
   };

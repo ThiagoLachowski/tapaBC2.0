@@ -8,10 +8,16 @@ import {
   Pressable,
   Animated,
   Easing,
+  Image,
+  Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../theme/tokens';
 import { BeamButton } from '../components/BeamButton';
+import { useAuth } from '../context/AuthContext';
+import { useReports } from '../context/ReportsContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Severity = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
@@ -40,7 +46,6 @@ function LabelInput({ label, placeholder, value, onChangeText, multiline = false
   label: string; placeholder: string; value: string;
   onChangeText: (t: string) => void; multiline?: boolean;
 }) {
-  const focused = useRef(new Animated.Value(0)).current;
   return (
     <View style={styles.inputWrapper}>
       <Text style={styles.inputLabel}>{label}</Text>
@@ -53,22 +58,61 @@ function LabelInput({ label, placeholder, value, onChangeText, multiline = false
         multiline={multiline}
         numberOfLines={multiline ? 4 : 1}
         textAlignVertical={multiline ? 'top' : 'center'}
-        onFocus={() => Animated.timing(focused, { toValue: 1, duration: 200, useNativeDriver: false }).start()}
-        onBlur={() => Animated.timing(focused, { toValue: 0, duration: 200, useNativeDriver: false }).start()}
       />
     </View>
   );
 }
 
-// ── Photo placeholder ─────────────────────────────────────────────────────────
-function PhotoSlot({ filled }: { filled: boolean }) {
+// ── Custom Photo Modal ────────────────────────────────────────────────────────
+function PhotoModal({ visible, onClose, onTakePhoto }: { visible: boolean; onClose: () => void; onTakePhoto: () => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(100)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 100, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
+  if (!visible) return null;
+
   return (
-    <Pressable style={[styles.photoSlot, filled && styles.photoSlotFilled]}>
-      {filled
-        ? <Text style={styles.photoCheck}>✓</Text>
-        : <Text style={styles.photoPlus}>＋</Text>
-      }
-    </Pressable>
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View style={[styles.modalContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Adicionar Foto</Text>
+            <Text style={styles.modalSub}>Capture uma imagem real do buraco</Text>
+          </View>
+          
+          <View style={styles.modalActions}>
+            <Pressable style={styles.modalActionBtn} onPress={onTakePhoto}>
+              <View style={styles.modalActionIconBox}>
+                <Text style={{ fontSize: 24 }}>📸</Text>
+              </View>
+              <View>
+                <Text style={styles.modalActionLabel}>Tirar Foto</Text>
+                <Text style={styles.modalActionDesc}>Usar a câmera do celular</Text>
+              </View>
+            </Pressable>
+          </View>
+
+          <Pressable style={styles.modalCancel} onPress={onClose}>
+            <Text style={styles.modalCancelText}>Cancelar</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -100,14 +144,36 @@ function SuccessScreen({ onReset }: { onReset: () => void }) {
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export const ReportScreen = () => {
-  const [step, setStep]           = useState(0); // 0=local, 1=details, 2=done
+  const { user } = useAuth();
+  const { addReport } = useReports();
+
+  const [step, setStep]           = useState(0); 
   const [street, setStreet]       = useState('');
   const [neighborhood, setNhood]  = useState('');
   const [description, setDesc]    = useState('');
   const [severity, setSeverity]   = useState<Severity | null>(null);
-  const [photos]                  = useState([true, false, false]); // sim 1 foto "tirada"
+  const [images, setImages]       = useState<string[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const takePhoto = async () => {
+    setModalVisible(false);
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Precisamos de acesso à sua câmera para continuar.');
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
+  };
 
   const goToStep = (s: number) => {
     Animated.sequence([
@@ -117,19 +183,35 @@ export const ReportScreen = () => {
     setStep(s);
   };
 
-  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setStep(0); }} />;
+  const handleSubmit = () => {
+    if (!user || !severity) return;
+    const sevObj = SEVERITIES.find(s => s.label === severity)!;
+    addReport({
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
+      isCustomAvatar: user.isCustomAvatar,
+      street,
+      neighborhood,
+      description,
+      severity,
+      severityColor: sevObj.color,
+      images,
+    });
+    goToStep(2);
+  };
+
+  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setStep(0); }} />;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Reportar Buraco</Text>
           <Text style={styles.headerSub}>Ajude a melhorar as vias de Caxias</Text>
         </View>
 
-        {/* Step indicator */}
         <View style={styles.stepRow}>
           <StepDot n={1} active={step === 0} done={step > 0} />
           <View style={[styles.stepLine, step > 0 && styles.stepLineDone]} />
@@ -145,89 +227,70 @@ export const ReportScreen = () => {
 
         <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30, 0], outputRange: [0, 1] }), transform: [{ translateX: slideAnim }] }}>
 
-          {/* STEP 0 – Location */}
           {step === 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>📍 Onde é o buraco?</Text>
               <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} />
               <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} />
-
               <View style={styles.mapMini}>
                 <View style={styles.mapMiniContent}>
-                  <Text style={styles.mapMiniText}>📌 Toque para fixar no mapa</Text>
-                  <Text style={styles.mapMiniSub}>(integração de mapa em breve)</Text>
+                  <Text style={styles.mapMiniText}>📌 Localização automática ativada</Text>
+                  <Text style={styles.mapMiniSub}>(Caxias, Maranhão)</Text>
                 </View>
               </View>
-
-              <BeamButton
-                title="Próximo →"
-                isPrimary
-                style={styles.ctaBtn}
-                onPress={() => { if (street && neighborhood) goToStep(1); }}
-              />
+              <BeamButton title="Próximo →" isPrimary style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
             </View>
           )}
 
-          {/* STEP 1 – Details */}
           {step === 1 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>🔍 Detalhe o problema</Text>
-
               <Text style={styles.inputLabel}>Gravidade</Text>
               <View style={styles.severityGrid}>
                 {SEVERITIES.map((s) => (
-                  <Pressable
-                    key={s.label}
-                    onPress={() => setSeverity(s.label)}
-                    style={[
-                      styles.severityOption,
-                      { borderColor: severity === s.label ? s.color : theme.colors.border },
-                      severity === s.label && { backgroundColor: s.color + '18' },
-                    ]}
-                  >
+                  <Pressable key={s.label} onPress={() => setSeverity(s.label)} style={[styles.severityOption, { borderColor: severity === s.label ? s.color : theme.colors.border }, severity === s.label && { backgroundColor: s.color + '18' }]}>
                     <Text style={{ fontSize: 18 }}>{s.icon}</Text>
                     <Text style={[styles.severityOptionText, severity === s.label && { color: s.color }]}>{s.label}</Text>
                   </Pressable>
                 ))}
               </View>
-
-              <LabelInput
-                label="Descrição"
-                placeholder="Descreva o problema (tamanho, profundidade, riscos...)"
-                value={description}
-                onChangeText={setDesc}
-                multiline
-              />
-
-              <Text style={styles.inputLabel}>Fotos (opcional)</Text>
+              <LabelInput label="Descrição" placeholder="Descreva o problema (riscos...)" value={description} onChangeText={setDesc} multiline />
+              <Text style={styles.inputLabel}>Fotos do buraco ({images.length}/3)</Text>
               <View style={styles.photoRow}>
-                {photos.map((filled, i) => <PhotoSlot key={i} filled={filled} />)}
+                {images.map((uri, i) => (
+                  <View key={i} style={styles.photoPreviewWrapper}>
+                    <Image source={{ uri }} style={styles.photoPreview} />
+                    <Pressable style={styles.photoRemove} onPress={() => setImages(images.filter((_, idx) => idx !== i))}>
+                      <Text style={{ color: '#FFF', fontSize: 10 }}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                {images.length < 3 && (
+                  <Pressable style={styles.photoSlot} onPress={() => setModalVisible(true)}>
+                    <Text style={styles.photoPlus}>＋</Text>
+                  </Pressable>
+                )}
               </View>
-
               <View style={styles.btnRow}>
                 <BeamButton title="← Voltar" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => goToStep(0)} />
-                <BeamButton title="Enviar ✓" isPrimary style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => { if (severity) goToStep(2); }} />
+                <BeamButton title="Enviar ✓" isPrimary style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={handleSubmit} />
               </View>
             </View>
           )}
-
         </Animated.View>
+        <PhotoModal visible={modalVisible} onClose={() => setModalVisible(false)} onTakePhoto={takePhoto} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: theme.colors.background },
   scroll:  { flex: 1 },
   content: { padding: theme.spacing.lg, paddingBottom: 40 },
-
   header:     { marginBottom: theme.spacing.xl },
   headerTitle:{ fontSize: 24, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
   headerSub:  { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
-
-  // Steps
   stepRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xs },
   stepDot:    { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surface2, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: theme.colors.border },
   stepDotActive: { borderColor: theme.colors.primary, backgroundColor: 'rgba(249,115,22,0.15)' },
@@ -237,42 +300,44 @@ const styles = StyleSheet.create({
   stepLineDone:{ backgroundColor: theme.colors.primary },
   stepLabels:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.xl },
   stepLabel:   { fontSize: 10, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.regular, textAlign: 'center', width: 60 },
-
-  // Card
   card:        { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
   cardTitle:   { fontSize: 17, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, marginBottom: theme.spacing.xs },
-
-  // Input
   inputWrapper:  { gap: 6 },
   inputLabel:    { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   input:         { backgroundColor: theme.colors.surface2, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.textPrimary, paddingHorizontal: theme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: theme.typography.fontFamily.regular },
   inputMulti:    { height: 100 },
-
-  // Map mini
   mapMini:       { height: 90, backgroundColor: theme.colors.surface2, borderRadius: theme.radii.lg, borderWidth: 1, borderColor: theme.colors.border, justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed' },
   mapMiniContent:{ alignItems: 'center' },
   mapMiniText:   { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 13 },
   mapMiniSub:    { color: theme.colors.textMuted, fontSize: 11, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
-
-  // Severity
   severityGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   severityOption:{ flex: 1, minWidth: '40%', alignItems: 'center', padding: theme.spacing.sm, borderRadius: theme.radii.md, borderWidth: 1.5, gap: 4 },
   severityOptionText: { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },
-
-  // Photos
-  photoRow:  { flexDirection: 'row', gap: theme.spacing.sm },
-  photoSlot: { width: 72, height: 72, borderRadius: theme.radii.md, borderWidth: 1.5, borderColor: theme.colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface2 },
-  photoSlotFilled: { borderColor: theme.colors.primary, backgroundColor: 'rgba(249,115,22,0.1)', borderStyle: 'solid' },
+  photoRow:  { flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' },
+  photoPreviewWrapper: { position: 'relative' },
+  photoPreview: { width: 80, height: 80, borderRadius: theme.radii.md },
+  photoRemove: { position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: theme.colors.surface1 },
+  photoSlot: { width: 80, height: 80, borderRadius: theme.radii.md, borderWidth: 1.5, borderColor: theme.colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface2 },
   photoPlus: { fontSize: 24, color: theme.colors.textMuted },
-  photoCheck:{ fontSize: 24, color: theme.colors.primary },
-
-  // Buttons
   ctaBtn: { marginTop: theme.spacing.sm },
   btnRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-
-  // Success
   successContainer: { flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.xl },
   successIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.35)', justifyContent: 'center', alignItems: 'center', marginBottom: theme.spacing.lg },
   successTitle:{ fontSize: 26, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, marginBottom: theme.spacing.md },
   successSub:  { fontSize: 14, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, textAlign: 'center', lineHeight: 22 },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: theme.colors.surface1, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: theme.spacing.xl, paddingBottom: 40, borderTopWidth: 1, borderColor: theme.colors.border },
+  modalHeader: { alignItems: 'center', marginBottom: theme.spacing.lg },
+  modalHandle: { width: 40, height: 4, backgroundColor: theme.colors.border, borderRadius: 2, marginBottom: 16 },
+  modalTitle: { fontSize: 18, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
+  modalSub: { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
+  modalActions: { gap: theme.spacing.md, marginBottom: theme.spacing.xl },
+  modalActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, padding: theme.spacing.md, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
+  modalActionIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(249,115,22,0.1)', justifyContent: 'center', alignItems: 'center' },
+  modalActionLabel: { fontSize: 15, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
+  modalActionDesc: { fontSize: 12, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.regular, marginTop: 2 },
+  modalCancel: { alignItems: 'center', padding: theme.spacing.md },
+  modalCancelText: { color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.medium, fontSize: 14 },
 });

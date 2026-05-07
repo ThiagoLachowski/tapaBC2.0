@@ -1,25 +1,17 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Easing, Dimensions,
+  View, Text, StyleSheet, ScrollView, Animated, Easing, Dimensions, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
+import { UserAvatar } from '../components/UserAvatar';
+import { getRelativeTime } from '../utils/date';
 
 const { width } = Dimensions.get('window');
-
-const AVATAR_COLORS: Record<string, string> = {
-  orange: '#F97316', indigo: '#6366F1', emerald: '#10B981',
-  rose: '#F43F5E', sky: '#0EA5E9', violet: '#8B5CF6',
-};
-
-function getAvatarBg(key: string) { return AVATAR_COLORS[key] ?? '#F97316'; }
-
-function getInitials(name: string) {
-  return name.trim().split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'CX';
-}
+const CARD_IMAGE_WIDTH = width - (theme.spacing.lg * 2) - (theme.spacing.md * 2) - 20; // Largura do card menos paddings e o dot lateral
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, delay }: { label: string; value: string | number; icon: string; delay: number }) {
@@ -77,22 +69,34 @@ function EmptyState() {
     <View style={styles.empty}>
       <Text style={styles.emptyEmoji}>🕳️</Text>
       <Text style={styles.emptyTitle}>Nenhum reporte ainda</Text>
-      <Text style={styles.emptySub}>Seja o primeiro a reportar um buraco em Caxias! Use a aba Reportar abaixo.</Text>
+      <Text style={styles.emptySub}>Seja o primeiro a reportar um buraco em Caxias!</Text>
     </View>
   );
 }
 
 // ── Report mini card ──────────────────────────────────────────────────────────
-function ReportMini({ item }: { item: any }) {
+function ReportMini({ item, ticker }: { item: any; ticker: number }) {
   return (
     <View style={styles.reportRow}>
       <View style={[styles.dot, { backgroundColor: item.severityColor }]} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.reportStreet}>{item.street}</Text>
-        <Text style={styles.reportSub}>{item.neighborhood} · {item.timeAgo}</Text>
-      </View>
-      <View style={[styles.sevBadge, { backgroundColor: item.severityColor + '22', borderColor: item.severityColor + '55' }]}>
-        <Text style={[styles.sevText, { color: item.severityColor }]}>{item.severity}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportStreet}>{item.street}</Text>
+            <Text style={styles.reportSub}>{item.neighborhood} · {getRelativeTime(item.createdAt)}</Text>
+          </View>
+          <View style={[styles.sevBadge, { backgroundColor: item.severityColor + '22', borderColor: item.severityColor + '55' }]}>
+            <Text style={[styles.sevText, { color: item.severityColor }]}>{item.severity}</Text>
+          </View>
+        </View>
+
+        {item.images && item.images.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.miniGallery} contentContainerStyle={{ gap: 8 }}>
+            {item.images.map((img: string, i: number) => (
+              <Image key={i} source={{ uri: img }} style={styles.miniImage} />
+            ))}
+          </ScrollView>
+        )}
       </View>
     </View>
   );
@@ -103,9 +107,14 @@ export const HomeScreen = () => {
   const { user } = useAuth();
   const { reports } = useReports();
   const headerAnim = useRef(new Animated.Value(0)).current;
+  const [ticker, setTicker] = useState(0);
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    
+    // Auto-refresh every 30s
+    const interval = setInterval(() => setTicker(t => t + 1), 30000);
+    return () => clearInterval(interval);
   }, [headerAnim]);
 
   const resolved = reports.filter(r => r.status === 'Resolvido').length;
@@ -118,36 +127,30 @@ export const HomeScreen = () => {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
-        {/* Header */}
         <Animated.View style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0,1], outputRange: [-12,0] }) }] }]}>
           <View>
             <Text style={styles.greeting}>Olá, {user.name.split(' ')[0]} 👋</Text>
             <Text style={styles.headerTitle}>Mapa de Buracos</Text>
           </View>
-          <View style={[styles.avatarCircle, { backgroundColor: getAvatarBg(user.avatar) }]}>
-            <Text style={styles.avatarText}>{getInitials(user.name)}</Text>
-          </View>
+          <UserAvatar user={user} />
         </Animated.View>
 
-        {/* Stats */}
         <View style={styles.statsRow}>
           <StatCard icon="📍" label="Reportados" value={reports.length} delay={100} />
           <StatCard icon="🔍" label="Em análise"  value={analyzing}       delay={200} />
           <StatCard icon="✅" label="Resolvidos"  value={resolved}         delay={300} />
         </View>
 
-        {/* Map */}
         <Text style={styles.sectionTitle}>Mapa da cidade</Text>
         <MapPlaceholder pins={pins} />
 
-        {/* Recent reports */}
         <Text style={styles.sectionTitle}>
           Reportes recentes{reports.length > 0 ? ` (${reports.length})` : ''}
         </Text>
         {reports.length === 0
           ? <EmptyState />
           : <View style={styles.reportsList}>
-              {reports.slice(0, 5).map(r => <ReportMini key={r.id} item={r} />)}
+              {reports.slice(0, 5).map(r => <ReportMini key={r.id} item={r} ticker={ticker} />)}
             </View>
         }
 
@@ -156,25 +159,18 @@ export const HomeScreen = () => {
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: theme.colors.background },
   content: { paddingBottom: 32 },
-
   header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.md, marginBottom: theme.spacing.lg },
   greeting:    { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginBottom: 2 },
   headerTitle: { fontSize: 22, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  avatarCircle:{ width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
-  avatarText:  { color: '#FFF', fontFamily: theme.typography.fontFamily.semiBold, fontSize: 13 },
-
   statsRow:    { flexDirection: 'row', paddingHorizontal: theme.spacing.lg, gap: theme.spacing.sm, marginBottom: theme.spacing.lg },
   statCard:    { flex: 1, backgroundColor: theme.colors.surface1, borderRadius: theme.radii.lg, padding: theme.spacing.md, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border },
   statIcon:    { fontSize: 18, marginBottom: 4 },
   statValue:   { fontSize: 20, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
   statLabel:   { fontSize: 10, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 2, textAlign: 'center' },
-
   sectionTitle:{ fontSize: 15, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.sm },
-
   mapContainer:{ marginHorizontal: theme.spacing.lg, height: 200, borderRadius: theme.radii.xl, overflow: 'hidden', marginBottom: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, position: 'relative' },
   mapGrid:     { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.04)' },
   mapPin:      { position: 'absolute', width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#000' },
@@ -183,15 +179,15 @@ const styles = StyleSheet.create({
   liveBadge:   { position: 'absolute', top: 10, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: theme.radii.full, gap: 5 },
   liveDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
   liveText:    { color: '#22C55E', fontSize: 10, fontFamily: theme.typography.fontFamily.medium },
-
   reportsList: { marginHorizontal: theme.spacing.lg, gap: theme.spacing.sm },
-  reportRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface1, borderRadius: theme.radii.lg, padding: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.sm },
-  dot:         { width: 10, height: 10, borderRadius: 5 },
+  reportRow:   { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: theme.colors.surface1, borderRadius: theme.radii.lg, padding: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.sm },
+  dot:         { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
   reportStreet:{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.medium, fontSize: 13 },
   reportSub:   { color: theme.colors.textSecondary, fontSize: 11, fontFamily: theme.typography.fontFamily.regular, marginTop: 2 },
-  sevBadge:    { paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radii.full, borderWidth: 1 },
+  miniGallery: { marginTop: 10, paddingRight: 10 },
+  miniImage:   { width: CARD_IMAGE_WIDTH * 0.8, height: 120, borderRadius: theme.radii.md },
+  sevBadge:    { paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radii.full, borderWidth: 1, marginLeft: 8 },
   sevText:     { fontSize: 10, fontFamily: theme.typography.fontFamily.medium },
-
   empty:       { marginHorizontal: theme.spacing.lg, alignItems: 'center', padding: theme.spacing.xl, backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.sm },
   emptyEmoji:  { fontSize: 40 },
   emptyTitle:  { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, fontSize: 16 },

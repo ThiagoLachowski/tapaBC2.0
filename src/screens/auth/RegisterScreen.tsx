@@ -2,10 +2,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, Pressable,
   Animated, Easing, ScrollView, KeyboardAvoidingView,
-  Platform, ActivityIndicator,
+  Platform, ActivityIndicator, Image, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { BeamButton } from '../../components/BeamButton';
@@ -14,17 +15,15 @@ import { AuthStackParamList } from '../../navigation/AuthNavigator';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'> };
 
-// ── Avatar options ────────────────────────────────────────────────────────────
 const AVATARS = [
-  { key: 'orange',  bg: '#F97316', initials: true },
-  { key: 'indigo',  bg: '#6366F1', initials: true },
-  { key: 'emerald', bg: '#10B981', initials: true },
-  { key: 'rose',    bg: '#F43F5E', initials: true },
-  { key: 'sky',     bg: '#0EA5E9', initials: true },
-  { key: 'violet',  bg: '#8B5CF6', initials: true },
+  { key: 'orange',  bg: '#F97316' },
+  { key: 'indigo',  bg: '#6366F1' },
+  { key: 'emerald', bg: '#10B981' },
+  { key: 'rose',    bg: '#F43F5E' },
+  { key: 'sky',     bg: '#0EA5E9' },
+  { key: 'violet',  bg: '#8B5CF6' },
 ];
 
-// ── Input field ───────────────────────────────────────────────────────────────
 function Field({ label, placeholder, value, onChangeText, secure = false, keyboardType = 'default', autoCapitalize = 'none' }: {
   label: string; placeholder: string; value: string;
   onChangeText: (v: string) => void; secure?: boolean;
@@ -62,40 +61,6 @@ function Field({ label, placeholder, value, onChangeText, secure = false, keyboa
   );
 }
 
-// ── Avatar picker ─────────────────────────────────────────────────────────────
-function AvatarPicker({ name, selected, onSelect }: {
-  name: string; selected: string; onSelect: (key: string) => void;
-}) {
-  const initials = name.trim().split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'CX';
-  return (
-    <View style={styles.avatarSection}>
-      {/* Big preview */}
-      <View style={[styles.avatarPreview, { backgroundColor: AVATARS.find(a => a.key === selected)?.bg ?? '#F97316' }]}>
-        <Text style={styles.avatarPreviewText}>{initials}</Text>
-      </View>
-      <Text style={styles.avatarHint}>Escolha uma cor para seu perfil</Text>
-
-      {/* Color grid */}
-      <View style={styles.avatarGrid}>
-        {AVATARS.map(a => (
-          <Pressable
-            key={a.key}
-            onPress={() => onSelect(a.key)}
-            style={[
-              styles.avatarOption,
-              { backgroundColor: a.bg },
-              selected === a.key && styles.avatarOptionSelected,
-            ]}
-          >
-            {selected === a.key && <Text style={styles.avatarCheck}>✓</Text>}
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────────
 export function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
   const [name, setName]         = useState('');
@@ -103,14 +68,14 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [avatar, setAvatar]     = useState('orange');
+  const [isCustom, setIsCustom] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
-
-  // Step: 0 = info, 1 = avatar
-  const [step, setStep] = useState(0);
+  const [step, setStep]         = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim,  { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }),
@@ -118,116 +83,90 @@ export function RegisterScreen({ navigation }: Props) {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const goNext = () => {
-    if (!name.trim())     { setError('Digite seu nome.'); return; }
-    if (!email.trim())    { setError('Digite seu e-mail.'); return; }
-    if (password.length < 6) { setError('Senha mínima de 6 caracteres.'); return; }
-    if (password !== confirm) { setError('As senhas não coincidem.'); return; }
-    setError('');
-    setStep(1);
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão negada', 'Precisamos de acesso às suas fotos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
+      setIsCustom(true);
+    }
   };
 
   const handleRegister = async () => {
     setLoading(true);
-    const err = await register(name, email, password, avatar);
+    const err = await register(name, email, password, avatar, isCustom);
     setLoading(false);
     if (err) { setError(err); setStep(0); }
   };
 
+  const initials = name.trim().split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'CX';
+
   return (
     <SafeAreaView style={styles.safe}>
       <LinearGradient colors={[theme.colors.surface1, theme.colors.background]} style={StyleSheet.absoluteFillObject} />
-      <LinearGradient colors={['rgba(99,102,241,0.10)', 'transparent']} style={styles.glow} />
-
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
-            {/* Header */}
             <View style={styles.header}>
               <Pressable onPress={() => step === 1 ? setStep(0) : navigation.goBack()} style={styles.backBtn}>
                 <Text style={styles.backText}>← Voltar</Text>
               </Pressable>
-              <View>
-                <Text style={styles.headerTitle}>{step === 0 ? 'Criar conta' : 'Foto de perfil'}</Text>
-                <Text style={styles.headerSub}>{step === 0 ? 'Preencha suas informações' : 'Escolha como te reconhecer'}</Text>
-              </View>
-
-              {/* Step dots */}
-              <View style={styles.stepRow}>
-                <View style={[styles.stepDot, step >= 0 && styles.stepDotActive]} />
-                <View style={[styles.stepLine, step >= 1 && styles.stepLineDone]} />
-                <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]} />
-              </View>
+              <Text style={styles.headerTitle}>{step === 0 ? 'Criar conta' : 'Foto de perfil'}</Text>
+              <Text style={styles.headerSub}>{step === 0 ? 'Preencha suas informações' : 'Escolha como te reconhecer'}</Text>
             </View>
 
-            {/* Step 0 – Info */}
             {step === 0 && (
               <View style={styles.card}>
-                <Field
-                  label="Nome completo"
-                  placeholder="Como você se chama?"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                />
-                <Field
-                  label="E-mail"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                />
-                <Field
-                  label="Senha"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChangeText={setPassword}
-                  secure
-                />
-                <Field
-                  label="Confirmar senha"
-                  placeholder="Repita sua senha"
-                  value={confirm}
-                  onChangeText={setConfirm}
-                  secure
-                />
-                {!!error && (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️  {error}</Text>
-                  </View>
-                )}
-                <BeamButton title="Próximo →" isPrimary style={styles.btn} onPress={goNext} />
+                <Field label="Nome completo" placeholder="Como você se chama?" value={name} onChangeText={setName} autoCapitalize="words" />
+                <Field label="E-mail" placeholder="seu@email.com" value={email} onChangeText={setEmail} keyboardType="email-address" />
+                <Field label="Senha" placeholder="Mínimo 6 caracteres" value={password} onChangeText={setPassword} secure />
+                <Field label="Confirmar senha" placeholder="Repita sua senha" value={confirm} onChangeText={setConfirm} secure />
+                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text></View>}
+                <BeamButton title="Próximo →" isPrimary style={styles.btn} onPress={() => {
+                  if(!name || !email || password.length < 6 || password !== confirm) {
+                    setError('Verifique os campos acima.'); return;
+                  }
+                  setError(''); setStep(1);
+                }} />
               </View>
             )}
 
-            {/* Step 1 – Avatar */}
             {step === 1 && (
               <View style={styles.card}>
-                <AvatarPicker name={name} selected={avatar} onSelect={setAvatar} />
-                {!!error && (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️  {error}</Text>
+                <View style={styles.avatarSection}>
+                  <View style={[styles.avatarPreview, !isCustom && { backgroundColor: AVATARS.find(a => a.key === avatar)?.bg || '#F97316' }]}>
+                    {isCustom ? (
+                      <Image source={{ uri: avatar }} style={styles.avatarImg} />
+                    ) : (
+                      <Text style={styles.avatarPreviewText}>{initials}</Text>
+                    )}
                   </View>
-                )}
-                <BeamButton
-                  title={loading ? 'Criando conta...' : 'Criar minha conta ✓'}
-                  isPrimary
-                  style={styles.btn}
-                  onPress={handleRegister}
-                />
-                {loading && <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 8 }} />}
-              </View>
-            )}
+                  
+                  <Pressable style={styles.galleryBtn} onPress={pickImage}>
+                    <Text style={styles.galleryBtnIcon}>🖼️</Text>
+                    <Text style={styles.galleryBtnText}>Escolher da Galeria</Text>
+                  </Pressable>
 
-            {/* Login link */}
-            {step === 0 && (
-              <Pressable onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
-                <Text style={styles.loginText}>
-                  Já tem conta?{' '}
-                  <Text style={styles.loginHighlight}>Entrar →</Text>
-                </Text>
-              </Pressable>
+                  <Text style={styles.avatarHint}>Ou selecione uma cor sólida:</Text>
+                  <View style={styles.avatarGrid}>
+                    {AVATARS.map(a => (
+                      <Pressable key={a.key} onPress={() => { setAvatar(a.key); setIsCustom(false); }} style={[styles.avatarOption, { backgroundColor: a.bg }, !isCustom && avatar === a.key && styles.avatarOptionSelected]} />
+                    ))}
+                  </View>
+                </View>
+
+                <BeamButton title={loading ? 'Criando conta...' : 'Criar minha conta ✓'} isPrimary style={styles.btn} onPress={handleRegister} />
+              </View>
             )}
 
           </Animated.View>
@@ -237,47 +176,32 @@ export function RegisterScreen({ navigation }: Props) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe:     { flex: 1, backgroundColor: theme.colors.background },
-  glow:     { position: 'absolute', top: -50, left: '5%', width: '90%', height: 350, borderRadius: 200 },
   scroll:   { flexGrow: 1, justifyContent: 'center', padding: theme.spacing.lg },
   container:{ gap: theme.spacing.lg },
-
-  header:     { gap: theme.spacing.sm },
-  backBtn:    { alignSelf: 'flex-start' },
+  header:     { gap: 4 },
+  backBtn:    { alignSelf: 'flex-start', marginBottom: 8 },
   backText:   { color: theme.colors.primary, fontFamily: theme.typography.fontFamily.medium, fontSize: 14 },
   headerTitle:{ fontSize: 22, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
   headerSub:  { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular },
-  stepRow:    { flexDirection: 'row', alignItems: 'center', gap: 0, marginTop: 4 },
-  stepDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.border },
-  stepDotActive: { backgroundColor: theme.colors.primary },
-  stepLine:   { width: 24, height: 2, backgroundColor: theme.colors.border, marginHorizontal: 4 },
-  stepLineDone:{ backgroundColor: theme.colors.primary },
-
   card:       { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
-
   fieldWrapper:{ gap: 6 },
   fieldLabel:  { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   fieldBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, borderRadius: theme.radii.md, borderWidth: 1.5, paddingHorizontal: theme.spacing.md },
   fieldInput:  { flex: 1, color: theme.colors.textPrimary, fontSize: 15, fontFamily: theme.typography.fontFamily.regular, paddingVertical: 13 },
-
   errorBox:   { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: theme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: theme.spacing.sm },
   errorText:  { color: '#EF4444', fontSize: 13, fontFamily: theme.typography.fontFamily.regular },
-
   btn:        { marginTop: 4 },
-
-  // Avatar
   avatarSection:   { alignItems: 'center', gap: theme.spacing.md },
-  avatarPreview:   { width: 96, height: 96, borderRadius: 48, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.15)' },
+  avatarPreview:   { width: 96, height: 96, borderRadius: 48, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' },
+  avatarImg:       { width: '100%', height: '100%' },
   avatarPreviewText:{ color: '#FFF', fontSize: 30, fontFamily: theme.typography.fontFamily.semiBold },
-  avatarHint:      { color: theme.colors.textMuted, fontSize: 12, fontFamily: theme.typography.fontFamily.regular },
+  galleryBtn:      { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, paddingVertical: 10, paddingHorizontal: 16, borderRadius: theme.radii.full, borderWidth: 1, borderColor: theme.colors.border, gap: 8 },
+  galleryBtnIcon:  { fontSize: 18 },
+  galleryBtnText:  { color: theme.colors.textPrimary, fontSize: 13, fontFamily: theme.typography.fontFamily.medium },
+  avatarHint:      { color: theme.colors.textMuted, fontSize: 12, fontFamily: theme.typography.fontFamily.regular, marginTop: 8 },
   avatarGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm, justifyContent: 'center' },
-  avatarOption:    { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  avatarOption:    { width: 42, height: 42, borderRadius: 21 },
   avatarOptionSelected: { borderWidth: 3, borderColor: '#FFF' },
-  avatarCheck:     { color: '#FFF', fontSize: 18, fontFamily: theme.typography.fontFamily.semiBold },
-
-  loginLink:      { alignItems: 'center' },
-  loginText:      { color: theme.colors.textSecondary, fontSize: 14, fontFamily: theme.typography.fontFamily.regular },
-  loginHighlight: { color: theme.colors.primary, fontFamily: theme.typography.fontFamily.semiBold },
 });

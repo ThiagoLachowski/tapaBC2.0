@@ -2,7 +2,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  avatar: string;   // emoji or color key
+  avatar: string;   // color key OR image URI
+  isCustomAvatar?: boolean;
   handle: string;
   joinedAt: string;
 }
@@ -12,6 +13,7 @@ export interface Report {
   userId: string;
   userName: string;
   userAvatar: string;
+  isCustomAvatar?: boolean;
   street: string;
   neighborhood: string;
   description: string;
@@ -20,6 +22,6 @@ export interface Report {
   status: 'Novo' | 'Em análise' | 'Resolvido';
   votes: number;
   comments: number;
-  createdAt: string;
-  timeAgo: string;
+  createdAt: string; // ISO string
+  images: string[];
 }

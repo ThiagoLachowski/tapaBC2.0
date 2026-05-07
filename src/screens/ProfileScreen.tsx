@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,20 +13,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
+import { UserAvatar } from '../components/UserAvatar';
+import { getRelativeTime } from '../utils/date';
 
 const ACHIEVEMENTS = [
-  { id: '1', icon: '🏅', label: 'Primeiro Reporte',   done: true  },
-  { id: '2', icon: '🔟',  label: '10 Reportes',        done: true  },
-  { id: '3', icon: '🌟',  label: '5 Resolvidos',       done: true  },
+  { id: '1', icon: '🏅', label: 'Primeiro Reporte',   done: false },
+  { id: '2', icon: '🔟',  label: '10 Reportes',        done: false },
+  { id: '3', icon: '🌟',  label: '5 Resolvidos',       done: false },
   { id: '4', icon: '🗺️', label: 'Mapeou o Bairro',    done: false },
   { id: '5', icon: '🚀',  label: '50 Reportes',        done: false },
   { id: '6', icon: '👑',  label: 'Top Contribuidor',   done: false },
 ];
-
-const AVATAR_COLORS: Record<string, string> = {
-  orange: '#F97316', indigo: '#6366F1', emerald: '#10B981',
-  rose: '#F43F5E', sky: '#0EA5E9', violet: '#8B5CF6',
-};
 
 function AnimRow({ children, delay }: { children: React.ReactNode; delay: number }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -53,12 +50,25 @@ function AchievBadge({ icon, label, done }: { icon: string; label: string; done:
 export const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const { reports } = useReports();
+  const [ticker, setTicker] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setTicker(t => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!user) return null;
 
-  const userReportsCount = reports.filter(r => r.userId === user.id).length;
-  const resolvedCount = reports.filter(r => r.userId === user.id && r.status === 'Resolvido').length;
-  const initials = user.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+  const userReports = reports.filter(r => r.userId === user.id);
+  const userReportsCount = userReports.length;
+  const resolvedCount = userReports.filter(r => r.status === 'Resolvido').length;
+
+  const dynamicAchievements = ACHIEVEMENTS.map(ach => {
+    if (ach.id === '1' && userReportsCount >= 1) return { ...ach, done: true };
+    if (ach.id === '2' && userReportsCount >= 10) return { ...ach, done: true };
+    if (ach.id === '3' && resolvedCount >= 5) return { ...ach, done: true };
+    return ach;
+  });
 
   const MENU_ITEMS = [
     { icon: '🔔', label: 'Notificações',       sub: 'Novidades dos seus reportes' },
@@ -75,9 +85,7 @@ export const ProfileScreen = () => {
         <AnimRow delay={0}>
           <LinearGradient colors={['rgba(249,115,22,0.15)', 'transparent']} style={styles.heroBg} />
           <View style={styles.heroContent}>
-            <View style={[styles.avatar, { backgroundColor: AVATAR_COLORS[user.avatar] || theme.colors.primary }]}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
+            <UserAvatar user={user} size={64} />
             <View style={styles.heroInfo}>
               <Text style={styles.heroName}>{user.name}</Text>
               <Text style={styles.heroHandle}>{user.handle}</Text>
@@ -101,11 +109,30 @@ export const ProfileScreen = () => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>#47</Text>
+              <Text style={styles.statValue}>#--</Text>
               <Text style={styles.statLabel}>Ranking</Text>
             </View>
           </View>
         </AnimRow>
+
+        {/* User History */}
+        {userReportsCount > 0 && (
+          <AnimRow delay={150}>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Seus últimos reportes</Text>
+              {userReports.slice(0, 3).map((r, i) => (
+                <View key={r.id} style={[styles.historyRow, i < 2 && styles.historyBorder]}>
+                  <View style={[styles.historyDot, { backgroundColor: r.severityColor }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyStreet}>{r.street}</Text>
+                    <Text style={styles.historyTime}>{getRelativeTime(r.createdAt)}</Text>
+                  </View>
+                  <Text style={[styles.historyStatus, { color: r.severityColor }]}>{r.status}</Text>
+                </View>
+              ))}
+            </View>
+          </AnimRow>
+        )}
 
         <AnimRow delay={180}>
           <View style={styles.sectionCard}>
@@ -115,12 +142,12 @@ export const ProfileScreen = () => {
                 colors={[theme.colors.primary, '#facc15']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${Math.min((userReportsCount/25)*100, 100)}%` }]}
+                style={[styles.progressFill, { width: `${Math.min((userReportsCount/10)*100, 100)}%` }]}
               />
             </View>
             <View style={styles.progressLabels}>
-              <Text style={styles.progressLabel}>{userReportsCount} / 25 reportes</Text>
-              <Text style={styles.progressLabel}>{Math.round(Math.min((userReportsCount/25)*100, 100))}%</Text>
+              <Text style={styles.progressLabel}>{userReportsCount} / 10 reportes</Text>
+              <Text style={styles.progressLabel}>{Math.round(Math.min((userReportsCount/10)*100, 100))}%</Text>
             </View>
           </View>
         </AnimRow>
@@ -129,7 +156,7 @@ export const ProfileScreen = () => {
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Conquistas</Text>
             <View style={styles.achievGrid}>
-              {ACHIEVEMENTS.map((a) => (
+              {dynamicAchievements.map((a) => (
                 <AchievBadge key={a.id} {...a} />
               ))}
             </View>
@@ -167,8 +194,6 @@ const styles = StyleSheet.create({
   content: { padding: theme.spacing.lg, paddingBottom: 40, gap: theme.spacing.md },
   heroBg:    { ...StyleSheet.absoluteFillObject },
   heroContent: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, marginBottom: theme.spacing.xs, backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border },
-  avatar:    { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' },
-  avatarText:{ color: '#FFF', fontSize: 22, fontFamily: theme.typography.fontFamily.semiBold },
   heroInfo:  { flex: 1, gap: 4 },
   heroName:  { color: theme.colors.textPrimary, fontSize: 18, fontFamily: theme.typography.fontFamily.semiBold },
   heroHandle:{ color: theme.colors.textMuted, fontSize: 12, fontFamily: theme.typography.fontFamily.regular },
@@ -181,6 +206,14 @@ const styles = StyleSheet.create({
   statDivider:{ width: 1, backgroundColor: theme.colors.border },
   sectionCard:  { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
   sectionTitle: { fontSize: 14, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
+  
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  historyBorder: { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  historyDot: { width: 8, height: 8, borderRadius: 4 },
+  historyStreet: { color: theme.colors.textPrimary, fontSize: 13, fontFamily: theme.typography.fontFamily.medium },
+  historyTime: { color: theme.colors.textMuted, fontSize: 11 },
+  historyStatus: { fontSize: 10, fontFamily: theme.typography.fontFamily.semiBold },
+
   progressBg:     { height: 8, backgroundColor: theme.colors.surface2, borderRadius: 4, overflow: 'hidden' },
   progressFill:   { height: '100%', borderRadius: 4 },
   progressLabels: { flexDirection: 'row', justifyContent: 'space-between' },
