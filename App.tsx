@@ -10,6 +10,7 @@ import { ReportsProvider } from './src/context/ReportsContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { theme } from './src/theme/tokens';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 
 // ── Splash / loading fade ─────────────────────────────────────────────────────
 function SplashFade({ children }: { children: React.ReactNode }) {
@@ -23,9 +24,11 @@ function SplashFade({ children }: { children: React.ReactNode }) {
 // ── Root Content (decides which navigator to show) ──────────────────────────
 function RootContent() {
   const { user } = useAuth();
+  const { isDark } = useTheme();
 
   return (
     <SplashFade>
+      <StatusBar style={isDark ? "light" : "dark"} />
       {user ? <AppNavigator /> : <AuthNavigator />}
     </SplashFade>
   );
@@ -42,14 +45,15 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      <AuthProvider>
-        <ReportsProvider>
-          <NavigationContainer>
-            <RootContent />
-          </NavigationContainer>
-        </ReportsProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ReportsProvider>
+            <NavigationContainer>
+              <RootContent />
+            </NavigationContainer>
+          </ReportsProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 import { theme } from '../theme/tokens';
 
 interface BeamButtonProps {
@@ -26,6 +27,7 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
   textStyle,
   isPrimary = false,
 }) => {
+  const { theme } = useTheme();
   const rotation = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -80,7 +82,7 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
               colors={
                 isPrimary
                   ? ['transparent', theme.colors.primary, 'transparent']
-                  : ['transparent', 'rgba(255,255,255,0.7)', 'transparent']
+                  : ['transparent', theme.colors.textSecondary, 'transparent']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -114,6 +116,7 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
     </Animated.View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

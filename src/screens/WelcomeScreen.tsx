@@ -8,8 +8,9 @@ import {
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { theme } from '../theme/tokens';
+import { theme as staticTheme } from '../theme/tokens';
 import { BeamButton } from '../components/BeamButton';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Animated fade-in helper ──────────────────────────────────────────────────
 function useFadeInUp(delay: number, duration = 600) {
@@ -39,24 +40,8 @@ function useFadeInUp(delay: number, duration = 600) {
 }
 
 // ─── Grid line individual component ───────────────────────────────────────────
-function GridLine({ delay }: { delay: number }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 1200,
-      delay,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [opacity, delay]);
-
-  return <Animated.View style={[styles.gridLine, { opacity }]} />;
-}
-
-// ─── Main Screen ───────────────────────────────────────────────────────────────
 export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress: () => void, onRegisterPress: () => void }) => {
+  const { theme, isDark } = useTheme();
   const badgeAnim  = useFadeInUp(150);
   const title1Anim = useFadeInUp(300);
   const title2Anim = useFadeInUp(420);
@@ -64,10 +49,10 @@ export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress:
   const btnsAnim   = useFadeInUp(660);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       <View style={styles.container}>
 
-        {/* Dark gradient background */}
+        {/* Dynamic gradient background */}
         <LinearGradient
           colors={[theme.colors.surface1, theme.colors.background]}
           style={StyleSheet.absoluteFillObject}
@@ -75,14 +60,14 @@ export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress:
 
         {/* Subtle radial glow at top */}
         <LinearGradient
-          colors={['rgba(249,115,22,0.08)', 'transparent']}
+          colors={[isDark ? 'rgba(249,115,22,0.08)' : 'rgba(16,185,129,0.08)', 'transparent']}
           style={styles.glowTop}
         />
 
         {/* Vertical grid lines */}
         <View style={styles.gridContainer} pointerEvents="none">
           {[0, 1, 2, 3, 4].map((i) => (
-            <GridLine key={i} delay={80 * i} />
+            <GridLine key={i} delay={80 * i} theme={theme} />
           ))}
         </View>
 
@@ -91,27 +76,27 @@ export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress:
 
           {/* Badge */}
           <Animated.View style={[styles.badgeWrapper, badgeAnim]}>
-            <View style={styles.badge}>
-              <View style={styles.badgeDot} />
-              <Text style={styles.badgeText}>Caxias Buracos v2.0</Text>
+            <View style={[styles.badge, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary + '44' }]}>
+              <View style={[styles.badgeDot, { backgroundColor: theme.colors.primary }]} />
+              <Text style={[styles.badgeText, { color: theme.colors.primary }]}>Caxias Buracos v2.0</Text>
             </View>
           </Animated.View>
 
           {/* Hero title */}
-          <Animated.Text style={[styles.title, title1Anim]}>
+          <Animated.Text style={[styles.title, { color: theme.colors.textPrimary }, title1Anim]}>
             Ajudando a construir
           </Animated.Text>
-          <Animated.Text style={[styles.title, styles.titleAccent, title2Anim]}>
+          <Animated.Text style={[styles.title, styles.titleAccent, { color: theme.colors.primary }, title2Anim]}>
             ruas melhores.
           </Animated.Text>
 
           {/* Subtitle */}
-          <Animated.Text style={[styles.subtitle, subAnim]}>
+          <Animated.Text style={[styles.subtitle, { color: theme.colors.textSecondary }, subAnim]}>
             Reporte buracos, visualize o mapa e interaja com a sua comunidade em Caxias.
           </Animated.Text>
 
           {/* Divider line */}
-          <Animated.View style={[styles.divider, subAnim]} />
+          <Animated.View style={[styles.divider, { backgroundColor: theme.colors.primary + '44' }, subAnim]} />
 
           {/* CTA buttons */}
           <Animated.View style={[styles.actionContainer, btnsAnim]}>
@@ -129,7 +114,7 @@ export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress:
           </Animated.View>
 
           {/* Footer note */}
-          <Animated.Text style={[styles.footerNote, btnsAnim]}>
+          <Animated.Text style={[styles.footerNote, { color: theme.colors.textMuted }, btnsAnim]}>
             Ao entrar, você concorda com os termos de uso da plataforma.
           </Animated.Text>
         </View>
@@ -138,10 +123,26 @@ export const WelcomeScreen = ({ onLoginPress, onRegisterPress }: { onLoginPress:
   );
 };
 
+function GridLine({ delay, theme }: { delay: number; theme: any }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 1200,
+      delay,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [opacity, delay]);
+
+  return <Animated.View style={[styles.gridLine, { opacity, backgroundColor: theme.colors.textPrimary }]} />;
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: staticTheme.colors.background,
   },
   container: {
     flex: 1,
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   gridLine: {
     width: 1,
     height: '100%',
-    backgroundColor: theme.colors.textPrimary,
+    backgroundColor: staticTheme.colors.textPrimary,
   },
   content: {
     flex: 1,
@@ -173,19 +174,19 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: staticTheme.spacing.lg,
     zIndex: 10,
   },
   badgeWrapper: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: staticTheme.spacing.xl,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(249,115,22,0.12)',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.full,
+    paddingHorizontal: staticTheme.spacing.md,
+    paddingVertical: staticTheme.spacing.xs,
+    borderRadius: staticTheme.radii.full,
     borderWidth: 1,
     borderColor: 'rgba(249,115,22,0.35)',
   },
@@ -193,31 +194,31 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: theme.colors.primary,
-    marginRight: theme.spacing.sm,
+    backgroundColor: staticTheme.colors.primary,
+    marginRight: staticTheme.spacing.sm,
   },
   badgeText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.sizes.xs,
-    fontFamily: theme.typography.fontFamily.medium,
+    color: staticTheme.colors.primary,
+    fontSize: staticTheme.typography.sizes.xs,
+    fontFamily: staticTheme.typography.fontFamily.medium,
     letterSpacing: 0.5,
   },
   title: {
     fontSize: 36,
-    fontFamily: theme.typography.fontFamily.semiBold,
-    color: theme.colors.textPrimary,
+    fontFamily: staticTheme.typography.fontFamily.semiBold,
+    color: staticTheme.colors.textPrimary,
     textAlign: 'center',
     lineHeight: 44,
     letterSpacing: -0.8,
   },
   titleAccent: {
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.lg,
+    color: staticTheme.colors.primary,
+    marginBottom: staticTheme.spacing.lg,
   },
   subtitle: {
-    fontSize: theme.typography.sizes.md,
-    fontFamily: theme.typography.fontFamily.regular,
-    color: theme.colors.textSecondary,
+    fontSize: staticTheme.typography.sizes.md,
+    fontFamily: staticTheme.typography.fontFamily.regular,
+    color: staticTheme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: '88%',
@@ -227,20 +228,20 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: 'rgba(249,115,22,0.4)',
-    marginVertical: theme.spacing.xl,
+    marginVertical: staticTheme.spacing.xl,
   },
   actionContainer: {
     width: '100%',
-    gap: theme.spacing.md,
+    gap: staticTheme.spacing.md,
   },
   btn: {
     width: '100%',
   },
   footerNote: {
-    marginTop: theme.spacing.lg,
+    marginTop: staticTheme.spacing.lg,
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: staticTheme.colors.textMuted,
     textAlign: 'center',
-    fontFamily: theme.typography.fontFamily.regular,
+    fontFamily: staticTheme.typography.fontFamily.regular,
   },
 });

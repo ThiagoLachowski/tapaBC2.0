@@ -5,6 +5,7 @@ import { HomeScreen }    from '../screens/HomeScreen';
 import { ReportScreen }  from '../screens/ReportScreen';
 import { FeedScreen }    from '../screens/FeedScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { useTheme } from '../context/ThemeContext';
 import { theme } from '../theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -16,29 +17,31 @@ const ICONS: Record<string, { default: string; active: string }> = {
   Perfil:    { default: '👤',  active: '👤' },
 };
 
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+function TabIcon({ name, focused, theme }: { name: string; focused: boolean; theme: any }) {
   const isReport = name === 'Reportar';
   if (isReport) {
     return (
-      <View style={styles.reportFab}>
+      <View style={[styles.reportFab, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary }]}>
         <Text style={styles.reportFabIcon}>＋</Text>
       </View>
     );
   }
-  return <Text style={[styles.icon, focused && styles.iconActive]}>{ICONS[name]?.default ?? '●'}</Text>;
+  return <Text style={[styles.icon, focused && styles.iconActive, { color: focused ? theme.colors.primary : theme.colors.textMuted }]}>{ICONS[name]?.default ?? '●'}</Text>;
 }
 
 export function AppNavigator() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { backgroundColor: theme.colors.surface1, borderTopColor: theme.colors.border }],
         tabBarItemStyle: styles.tabItem,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
+        tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} theme={theme} />,
       })}
     >
       <Tab.Screen name="Início"     component={HomeScreen}    />
@@ -51,12 +54,10 @@ export function AppNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#0e0e0e',
-    borderTopColor: 'rgba(255,255,255,0.07)',
-    borderTopWidth: 1,
     height: 72,
     paddingBottom: 12,
     paddingTop: 8,
+    borderTopWidth: 1,
   },
   tabItem: { height: 56 },
   tabLabel: {
@@ -70,11 +71,9 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
@@ -82,3 +81,4 @@ const styles = StyleSheet.create({
   },
   reportFabIcon: { color: '#FFF', fontSize: 28, lineHeight: 34, fontWeight: '300' },
 });
+

@@ -16,11 +16,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { theme } from '../theme/tokens';
+import { theme as staticTheme } from '../theme/tokens';
 import { BeamButton } from '../components/BeamButton';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
 import { LeafletMap } from '../components/LeafletMap';
+import { useTheme } from '../context/ThemeContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Severity = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
@@ -33,27 +34,32 @@ const SEVERITIES: { label: Severity; color: string; icon: string }[] = [
 ];
 
 // ── Step indicator ────────────────────────────────────────────────────────────
-function StepDot({ active, done, n }: { active: boolean; done: boolean; n: number }) {
+function StepDot({ active, done, n, theme }: { active: boolean; done: boolean; n: number; theme: any }) {
   return (
-    <View style={[styles.stepDot, active && styles.stepDotActive, done && styles.stepDotDone]}>
+    <View style={[
+      styles.stepDot, 
+      { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border },
+      active && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '22' },
+      done && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary }
+    ]}>
       {done
-        ? <Text style={styles.stepDotText}>✓</Text>
-        : <Text style={styles.stepDotText}>{n}</Text>
+        ? <Text style={[styles.stepDotText, { color: '#FFF' }]}>✓</Text>
+        : <Text style={[styles.stepDotText, { color: active ? theme.colors.primary : theme.colors.textPrimary }]}>{n}</Text>
       }
     </View>
   );
 }
 
 // ── Animated label input ──────────────────────────────────────────────────────
-function LabelInput({ label, placeholder, value, onChangeText, multiline = false }: {
+function LabelInput({ label, placeholder, value, onChangeText, multiline = false, theme }: {
   label: string; placeholder: string; value: string;
-  onChangeText: (t: string) => void; multiline?: boolean;
+  onChangeText: (t: string) => void; multiline?: boolean; theme: any;
 }) {
   return (
     <View style={styles.inputWrapper}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
       <TextInput
-        style={[styles.input, multiline && styles.inputMulti]}
+        style={[styles.input, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border, color: theme.colors.textPrimary }, multiline && styles.inputMulti]}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.textMuted}
         value={value}
@@ -67,7 +73,7 @@ function LabelInput({ label, placeholder, value, onChangeText, multiline = false
 }
 
 // ── Custom Photo Modal ────────────────────────────────────────────────────────
-function PhotoModal({ visible, onClose, onTakePhoto }: { visible: boolean; onClose: () => void; onTakePhoto: () => void }) {
+function PhotoModal({ visible, onClose, onTakePhoto, theme }: { visible: boolean; onClose: () => void; onTakePhoto: () => void; theme: any }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
 
@@ -91,27 +97,27 @@ function PhotoModal({ visible, onClose, onTakePhoto }: { visible: boolean; onClo
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View style={[styles.modalContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[styles.modalContent, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.modalHeader}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Adicionar Foto</Text>
-            <Text style={styles.modalSub}>Capture uma imagem real do buraco</Text>
+            <View style={[styles.modalHandle, { backgroundColor: theme.colors.border }]} />
+            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Adicionar Foto</Text>
+            <Text style={[styles.modalSub, { color: theme.colors.textSecondary }]}>Capture uma imagem real do buraco</Text>
           </View>
           
           <View style={styles.modalActions}>
-            <Pressable style={styles.modalActionBtn} onPress={onTakePhoto}>
-              <View style={styles.modalActionIconBox}>
+            <Pressable style={[styles.modalActionBtn, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }]} onPress={onTakePhoto}>
+              <View style={[styles.modalActionIconBox, { backgroundColor: theme.colors.primary + '22' }]}>
                 <Text style={{ fontSize: 24 }}>📸</Text>
               </View>
               <View>
-                <Text style={styles.modalActionLabel}>Tirar Foto</Text>
-                <Text style={styles.modalActionDesc}>Usar a câmera do celular</Text>
+                <Text style={[styles.modalActionLabel, { color: theme.colors.textPrimary }]}>Tirar Foto</Text>
+                <Text style={[styles.modalActionDesc, { color: theme.colors.textMuted }]}>Usar a câmera do celular</Text>
               </View>
             </Pressable>
           </View>
 
           <Pressable style={styles.modalCancel} onPress={onClose}>
-            <Text style={styles.modalCancelText}>Cancelar</Text>
+            <Text style={[styles.modalCancelText, { color: theme.colors.textMuted }]}>Cancelar</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -120,7 +126,7 @@ function PhotoModal({ visible, onClose, onTakePhoto }: { visible: boolean; onClo
 }
 
 // ── Success overlay ───────────────────────────────────────────────────────────
-function SuccessScreen({ onReset }: { onReset: () => void }) {
+function SuccessScreen({ onReset, theme }: { onReset: () => void; theme: any }) {
   const scale = useRef(new Animated.Value(0.7)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -132,12 +138,12 @@ function SuccessScreen({ onReset }: { onReset: () => void }) {
   }, [scale, opacity]);
 
   return (
-    <Animated.View style={[styles.successContainer, { opacity, transform: [{ scale }] }]}>
-      <View style={styles.successIcon}>
+    <Animated.View style={[styles.successContainer, { backgroundColor: theme.colors.background, opacity, transform: [{ scale }] }]}>
+      <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '22', borderColor: theme.colors.primary + '55' }]}>
         <Text style={{ fontSize: 40 }}>📍</Text>
       </View>
-      <Text style={styles.successTitle}>Reporte enviado!</Text>
-      <Text style={styles.successSub}>
+      <Text style={[styles.successTitle, { color: theme.colors.textPrimary }]}>Reporte enviado!</Text>
+      <Text style={[styles.successSub, { color: theme.colors.textSecondary }]}>
         Seu relato foi adicionado ao mapa de Caxias. Obrigado pela contribuição!
       </Text>
       <BeamButton title="Novo Reporte" isPrimary onPress={onReset} style={{ width: '80%', marginTop: 24 }} />
@@ -148,7 +154,8 @@ function SuccessScreen({ onReset }: { onReset: () => void }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 export const ReportScreen = () => {
   const { user } = useAuth();
-  const { addReport } = useReports();
+  const { reports, addReport } = useReports();
+  const { theme, isDark } = useTheme();
 
   const [step, setStep]           = useState(0); 
   const [street, setStreet]       = useState('');
@@ -222,81 +229,81 @@ export const ReportScreen = () => {
     goToStep(2);
   };
 
-  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setLocation(null); setStep(0); }} />;
+  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setLocation(null); setStep(0); }} theme={theme} />;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Reportar Buraco</Text>
-          <Text style={styles.headerSub}>Ajude a melhorar as vias de Caxias</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Reportar Buraco</Text>
+          <Text style={[styles.headerSub, { color: theme.colors.textSecondary }]}>Ajude a melhorar as vias de Caxias</Text>
         </View>
 
         <View style={styles.stepRow}>
-          <StepDot n={1} active={step === 0} done={step > 0} />
-          <View style={[styles.stepLine, step > 0 && styles.stepLineDone]} />
-          <StepDot n={2} active={step === 1} done={step > 1} />
-          <View style={styles.stepLine} />
-          <StepDot n={3} active={false} done={false} />
+          <StepDot n={1} active={step === 0} done={step > 0} theme={theme} />
+          <View style={[styles.stepLine, { backgroundColor: theme.colors.border }, step > 0 && { backgroundColor: theme.colors.primary }]} />
+          <StepDot n={2} active={step === 1} done={step > 1} theme={theme} />
+          <View style={[styles.stepLine, { backgroundColor: theme.colors.border }]} />
+          <StepDot n={3} active={false} done={false} theme={theme} />
         </View>
         <View style={styles.stepLabels}>
-          <Text style={styles.stepLabel}>Localização</Text>
-          <Text style={styles.stepLabel}>Detalhes</Text>
-          <Text style={styles.stepLabel}>Enviar</Text>
+          <Text style={[styles.stepLabel, { color: theme.colors.textMuted }]}>Localização</Text>
+          <Text style={[styles.stepLabel, { color: theme.colors.textMuted }]}>Detalhes</Text>
+          <Text style={[styles.stepLabel, { color: theme.colors.textMuted }]}>Enviar</Text>
         </View>
 
         <Animated.View style={{ opacity: slideAnim.interpolate({ inputRange: [-30, 0], outputRange: [0, 1] }), transform: [{ translateX: slideAnim }] }}>
 
           {step === 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>📍 Onde é o buraco?</Text>
+            <View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>📍 Onde é o buraco?</Text>
               
-              <Text style={styles.inputLabel}>Toque no mapa para marcar ou use GPS</Text>
-              <View style={styles.mapSelectionContainer}>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Toque no mapa para marcar ou use GPS</Text>
+              <View style={[styles.mapSelectionContainer, { borderColor: theme.colors.border }]}>
                 <LeafletMap 
                   center={location || { lat: -4.8622, lng: -43.3561 }}
                   markers={location ? [{ lat: location.lat, lng: location.lng, color: theme.colors.primary }] : []}
                   onLocationSelect={(lat, lng) => setLocation({ lat, lng })}
                 />
-                <Pressable style={styles.gpsBtn} onPress={getMyLocation} disabled={loadingLoc}>
+                <Pressable style={[styles.gpsBtn, { backgroundColor: theme.colors.primary }]} onPress={getMyLocation} disabled={loadingLoc}>
                   {loadingLoc ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={{ fontSize: 20 }}>🎯</Text>}
                 </Pressable>
               </View>
 
-              <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} />
-              <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} />
+              <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} theme={theme} />
+              <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} theme={theme} />
               
               <BeamButton title="Próximo →" isPrimary style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
             </View>
           )}
 
           {step === 1 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🔍 Detalhe o problema</Text>
-              <Text style={styles.inputLabel}>Gravidade</Text>
+            <View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>🔍 Detalhe o problema</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Gravidade</Text>
               <View style={styles.severityGrid}>
                 {SEVERITIES.map((s) => (
                   <Pressable key={s.label} onPress={() => setSeverity(s.label)} style={[styles.severityOption, { borderColor: severity === s.label ? s.color : theme.colors.border }, severity === s.label && { backgroundColor: s.color + '18' }]}>
                     <Text style={{ fontSize: 18 }}>{s.icon}</Text>
-                    <Text style={[styles.severityOptionText, severity === s.label && { color: s.color }]}>{s.label}</Text>
+                    <Text style={[styles.severityOptionText, { color: theme.colors.textSecondary }, severity === s.label && { color: s.color }]}>{s.label}</Text>
                   </Pressable>
                 ))}
               </View>
-              <LabelInput label="Descrição" placeholder="Descreva o problema (riscos...)" value={description} onChangeText={setDesc} multiline />
-              <Text style={styles.inputLabel}>Fotos do buraco ({images.length}/3)</Text>
+              <LabelInput label="Descrição" placeholder="Descreva o problema (riscos...)" value={description} onChangeText={setDesc} multiline theme={theme} />
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Fotos do buraco ({images.length}/3)</Text>
               <View style={styles.photoRow}>
                 {images.map((uri, i) => (
                   <View key={i} style={styles.photoPreviewWrapper}>
                     <Image source={{ uri }} style={styles.photoPreview} />
-                    <Pressable style={styles.photoRemove} onPress={() => setImages(images.filter((_, idx) => idx !== i))}>
+                    <Pressable style={[styles.photoRemove, { borderColor: theme.colors.surface1 }]} onPress={() => setImages(images.filter((_, idx) => idx !== i))}>
                       <Text style={{ color: '#FFF', fontSize: 10 }}>✕</Text>
                     </Pressable>
                   </View>
                 ))}
                 {images.length < 3 && (
-                  <Pressable style={styles.photoSlot} onPress={() => setModalVisible(true)}>
-                    <Text style={styles.photoPlus}>＋</Text>
+                  <Pressable style={[styles.photoSlot, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }]} onPress={() => setModalVisible(true)}>
+                    <Text style={[styles.photoPlus, { color: theme.colors.textMuted }]}>＋</Text>
                   </Pressable>
                 )}
               </View>
@@ -307,66 +314,66 @@ export const ReportScreen = () => {
             </View>
           )}
         </Animated.View>
-        <PhotoModal visible={modalVisible} onClose={() => setModalVisible(false)} onTakePhoto={takePhoto} />
+        <PhotoModal visible={modalVisible} onClose={() => setModalVisible(false)} onTakePhoto={takePhoto} theme={theme} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: theme.colors.background },
+  safe:    { flex: 1, backgroundColor: staticTheme.colors.background },
   scroll:  { flex: 1 },
-  content: { padding: theme.spacing.lg, paddingBottom: 40 },
-  header:     { marginBottom: theme.spacing.xl },
-  headerTitle:{ fontSize: 24, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  headerSub:  { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
-  stepRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.xs },
-  stepDot:    { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surface2, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: theme.colors.border },
-  stepDotActive: { borderColor: theme.colors.primary, backgroundColor: 'rgba(249,115,22,0.15)' },
-  stepDotDone: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
-  stepDotText: { color: theme.colors.textPrimary, fontSize: 11, fontFamily: theme.typography.fontFamily.semiBold },
-  stepLine:    { flex: 1, height: 1.5, backgroundColor: theme.colors.border },
-  stepLineDone:{ backgroundColor: theme.colors.primary },
-  stepLabels:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.xl },
-  stepLabel:   { fontSize: 10, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.regular, textAlign: 'center', width: 60 },
-  card:        { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
-  cardTitle:   { fontSize: 17, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, marginBottom: theme.spacing.xs },
+  content: { padding: staticTheme.spacing.lg, paddingBottom: 40 },
+  header:     { marginBottom: staticTheme.spacing.xl },
+  headerTitle:{ fontSize: 24, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
+  headerSub:  { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular, marginTop: 4 },
+  stepRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: staticTheme.spacing.xs },
+  stepDot:    { width: 28, height: 28, borderRadius: 14, backgroundColor: staticTheme.colors.surface2, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: staticTheme.colors.border },
+  stepDotActive: { borderColor: staticTheme.colors.primary, backgroundColor: 'rgba(249,115,22,0.15)' },
+  stepDotDone: { borderColor: staticTheme.colors.primary, backgroundColor: staticTheme.colors.primary },
+  stepDotText: { color: staticTheme.colors.textPrimary, fontSize: 11, fontFamily: staticTheme.typography.fontFamily.semiBold },
+  stepLine:    { flex: 1, height: 1.5, backgroundColor: staticTheme.colors.border },
+  stepLineDone:{ backgroundColor: staticTheme.colors.primary },
+  stepLabels:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: staticTheme.spacing.xl },
+  stepLabel:   { fontSize: 10, color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.regular, textAlign: 'center', width: 60 },
+  card:        { backgroundColor: staticTheme.colors.surface1, borderRadius: staticTheme.radii.xl, padding: staticTheme.spacing.lg, borderWidth: 1, borderColor: staticTheme.colors.border, gap: staticTheme.spacing.md },
+  cardTitle:   { fontSize: 17, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold, marginBottom: staticTheme.spacing.xs },
   inputWrapper:  { gap: 6 },
-  inputLabel:    { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input:         { backgroundColor: theme.colors.surface2, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.textPrimary, paddingHorizontal: theme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: theme.typography.fontFamily.regular },
+  inputLabel:    { fontSize: 12, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input:         { backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: staticTheme.colors.border, color: staticTheme.colors.textPrimary, paddingHorizontal: staticTheme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: staticTheme.typography.fontFamily.regular },
   inputMulti:    { height: 100 },
   
-  mapSelectionContainer: { height: 200, borderRadius: theme.radii.lg, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border, marginBottom: theme.spacing.sm, position: 'relative' },
-  gpsBtn: { position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
+  mapSelectionContainer: { height: 200, borderRadius: staticTheme.radii.lg, overflow: 'hidden', borderWidth: 1, borderColor: staticTheme.colors.border, marginBottom: staticTheme.spacing.sm, position: 'relative' },
+  gpsBtn: { position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: staticTheme.colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
 
-  severityGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  severityOption:{ flex: 1, minWidth: '40%', alignItems: 'center', padding: theme.spacing.sm, borderRadius: theme.radii.md, borderWidth: 1.5, gap: 4 },
-  severityOptionText: { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },
-  photoRow:  { flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' },
+  severityGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: staticTheme.spacing.sm },
+  severityOption:{ flex: 1, minWidth: '40%', alignItems: 'center', padding: staticTheme.spacing.sm, borderRadius: staticTheme.radii.md, borderWidth: 1.5, gap: 4 },
+  severityOptionText: { color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 12 },
+  photoRow:  { flexDirection: 'row', gap: staticTheme.spacing.sm, flexWrap: 'wrap' },
   photoPreviewWrapper: { position: 'relative' },
-  photoPreview: { width: 80, height: 80, borderRadius: theme.radii.md },
-  photoRemove: { position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: theme.colors.surface1 },
-  photoSlot: { width: 80, height: 80, borderRadius: theme.radii.md, borderWidth: 1.5, borderColor: theme.colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface2 },
-  photoPlus: { fontSize: 24, color: theme.colors.textMuted },
-  ctaBtn: { marginTop: theme.spacing.sm },
-  btnRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  successContainer: { flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.xl },
-  successIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.35)', justifyContent: 'center', alignItems: 'center', marginBottom: theme.spacing.lg },
-  successTitle:{ fontSize: 26, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, marginBottom: theme.spacing.md },
-  successSub:  { fontSize: 14, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, textAlign: 'center', lineHeight: 22 },
+  photoPreview: { width: 80, height: 80, borderRadius: staticTheme.radii.md },
+  photoRemove: { position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: staticTheme.colors.surface1 },
+  photoSlot: { width: 80, height: 80, borderRadius: staticTheme.radii.md, borderWidth: 1.5, borderColor: staticTheme.colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: staticTheme.colors.surface2 },
+  photoPlus: { fontSize: 24, color: staticTheme.colors.textMuted },
+  ctaBtn: { marginTop: staticTheme.spacing.sm },
+  btnRow: { flexDirection: 'row', gap: staticTheme.spacing.sm, marginTop: staticTheme.spacing.sm },
+  successContainer: { flex: 1, backgroundColor: staticTheme.colors.background, justifyContent: 'center', alignItems: 'center', padding: staticTheme.spacing.xl },
+  successIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.35)', justifyContent: 'center', alignItems: 'center', marginBottom: staticTheme.spacing.lg },
+  successTitle:{ fontSize: 26, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold, marginBottom: staticTheme.spacing.md },
+  successSub:  { fontSize: 14, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular, textAlign: 'center', lineHeight: 22 },
 
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: theme.colors.surface1, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: theme.spacing.xl, paddingBottom: 40, borderTopWidth: 1, borderColor: theme.colors.border },
-  modalHeader: { alignItems: 'center', marginBottom: theme.spacing.lg },
-  modalHandle: { width: 40, height: 4, backgroundColor: theme.colors.border, borderRadius: 2, marginBottom: 16 },
-  modalTitle: { fontSize: 18, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  modalSub: { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 4 },
-  modalActions: { gap: theme.spacing.md, marginBottom: theme.spacing.xl },
-  modalActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, padding: theme.spacing.md, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
+  modalContent: { backgroundColor: staticTheme.colors.surface1, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: staticTheme.spacing.xl, paddingBottom: 40, borderTopWidth: 1, borderColor: staticTheme.colors.border },
+  modalHeader: { alignItems: 'center', marginBottom: staticTheme.spacing.lg },
+  modalHandle: { width: 40, height: 4, backgroundColor: staticTheme.colors.border, borderRadius: 2, marginBottom: 16 },
+  modalTitle: { fontSize: 18, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
+  modalSub: { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular, marginTop: 4 },
+  modalActions: { gap: staticTheme.spacing.md, marginBottom: staticTheme.spacing.xl },
+  modalActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: staticTheme.colors.surface2, padding: staticTheme.spacing.md, borderRadius: staticTheme.radii.xl, borderWidth: 1, borderColor: staticTheme.colors.border, gap: staticTheme.spacing.md },
   modalActionIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(249,115,22,0.1)', justifyContent: 'center', alignItems: 'center' },
-  modalActionLabel: { fontSize: 15, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  modalActionDesc: { fontSize: 12, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.regular, marginTop: 2 },
-  modalCancel: { alignItems: 'center', padding: theme.spacing.md },
-  modalCancelText: { color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.medium, fontSize: 14 },
+  modalActionLabel: { fontSize: 15, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
+  modalActionDesc: { fontSize: 12, color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.regular, marginTop: 2 },
+  modalCancel: { alignItems: 'center', padding: staticTheme.spacing.md },
+  modalCancelText: { color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 14 },
 });

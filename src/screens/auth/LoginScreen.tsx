@@ -9,17 +9,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { BeamButton } from '../../components/BeamButton';
-import { theme } from '../../theme/tokens';
+import { theme as staticTheme } from '../../theme/tokens';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { useTheme } from '../../context/ThemeContext';
 
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'> };
 
 // ── Animated input field ───────────────────────────────────────────────────────
 function Field({
-  label, placeholder, value, onChangeText, secure = false, keyboardType = 'default',
+  label, placeholder, value, onChangeText, secure = false, keyboardType = 'default', theme
 }: {
   label: string; placeholder: string; value: string;
-  onChangeText: (v: string) => void; secure?: boolean; keyboardType?: any;
+  onChangeText: (v: string) => void; secure?: boolean; keyboardType?: any; theme: any;
 }) {
   const borderColor = useRef(new Animated.Value(0)).current;
   const [showPwd, setShowPwd] = useState(false);
@@ -31,10 +32,10 @@ function Field({
 
   return (
     <View style={styles.fieldWrapper}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Animated.View style={[styles.fieldBox, { borderColor: border }]}>
+      <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
+      <Animated.View style={[styles.fieldBox, { backgroundColor: theme.colors.surface2, borderColor: border }]}>
         <TextInput
-          style={styles.fieldInput}
+          style={[styles.fieldInput, { color: theme.colors.textPrimary }]}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.textMuted}
           value={value}
@@ -58,6 +59,7 @@ function Field({
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
+  const { theme, isDark } = useTheme();
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -158,37 +160,37 @@ export function LoginScreen({ navigation }: Props) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: theme.colors.background },
+  safe:     { flex: 1, backgroundColor: staticTheme.colors.background },
   glow:     { position: 'absolute', top: -50, left: '5%', width: '90%', height: 350, borderRadius: 200 },
-  scroll:   { flexGrow: 1, justifyContent: 'center', padding: theme.spacing.lg },
-  container:{ gap: theme.spacing.lg },
+  scroll:   { flexGrow: 1, justifyContent: 'center', padding: staticTheme.spacing.lg },
+  container:{ gap: staticTheme.spacing.lg },
 
   brand:       { alignItems: 'center', gap: 8 },
   logoCircle:  { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.4)', justifyContent: 'center', alignItems: 'center' },
   logoEmoji:   { fontSize: 32 },
-  logoTitle:   { fontSize: 24, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  logoSub:     { fontSize: 13, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular },
+  logoTitle:   { fontSize: 24, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
+  logoSub:     { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular },
 
-  card:        { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, padding: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.md },
-  cardTitle:   { fontSize: 18, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, marginBottom: 4 },
+  card:        { backgroundColor: staticTheme.colors.surface1, borderRadius: staticTheme.radii.xl, padding: staticTheme.spacing.lg, borderWidth: 1, borderColor: staticTheme.colors.border, gap: staticTheme.spacing.md },
+  cardTitle:   { fontSize: 18, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold, marginBottom: 4 },
 
   fieldWrapper:{ gap: 6 },
-  fieldLabel:  { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
-  fieldBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, borderRadius: theme.radii.md, borderWidth: 1.5, paddingHorizontal: theme.spacing.md },
-  fieldInput:  { flex: 1, color: theme.colors.textPrimary, fontSize: 15, fontFamily: theme.typography.fontFamily.regular, paddingVertical: 13 },
+  fieldLabel:  { fontSize: 12, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
+  fieldBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1.5, paddingHorizontal: staticTheme.spacing.md },
+  fieldInput:  { flex: 1, color: staticTheme.colors.textPrimary, fontSize: 15, fontFamily: staticTheme.typography.fontFamily.regular, paddingVertical: 13 },
   eyeBtn:      { padding: 4 },
   eyeIcon:     { fontSize: 16 },
 
-  errorBox:    { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: theme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: theme.spacing.sm },
-  errorText:   { color: '#EF4444', fontSize: 13, fontFamily: theme.typography.fontFamily.regular },
+  errorBox:    { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: staticTheme.spacing.sm },
+  errorText:   { color: '#EF4444', fontSize: 13, fontFamily: staticTheme.typography.fontFamily.regular },
 
   submitBtn:   { marginTop: 4 },
 
-  dividerRow:  { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  dividerLine: { flex: 1, height: 1, backgroundColor: theme.colors.border },
-  dividerText: { color: theme.colors.textMuted, fontSize: 12, fontFamily: theme.typography.fontFamily.regular },
+  dividerRow:  { flexDirection: 'row', alignItems: 'center', gap: staticTheme.spacing.sm },
+  dividerLine: { flex: 1, height: 1, backgroundColor: staticTheme.colors.border },
+  dividerText: { color: staticTheme.colors.textMuted, fontSize: 12, fontFamily: staticTheme.typography.fontFamily.regular },
 
   registerLink:   { alignItems: 'center' },
-  registerText:   { color: theme.colors.textSecondary, fontSize: 14, fontFamily: theme.typography.fontFamily.regular },
-  registerHighlight: { color: theme.colors.primary, fontFamily: theme.typography.fontFamily.semiBold },
+  registerText:   { color: staticTheme.colors.textSecondary, fontSize: 14, fontFamily: staticTheme.typography.fontFamily.regular },
+  registerHighlight: { color: staticTheme.colors.primary, fontFamily: staticTheme.typography.fontFamily.semiBold },
 });

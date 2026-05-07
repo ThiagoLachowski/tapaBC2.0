@@ -11,16 +11,17 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../theme/tokens';
 import { useReports } from '../context/ReportsContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
+import { useTheme } from '../context/ThemeContext';
+import { theme as staticTheme } from '../theme/tokens';
 
 const { width } = Dimensions.get('window');
 const FILTERS = ['Todos', 'Novos', 'Em análise', 'Resolvidos'];
 
 // ── Vote button ───────────────────────────────────────────────────────────────
-function VoteBtn({ count, onVote }: { count: number; onVote: () => void }) {
+function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; theme: any }) {
   const [voted, setVoted] = useState(false);
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -36,26 +37,33 @@ function VoteBtn({ count, onVote }: { count: number; onVote: () => void }) {
   };
 
   return (
-    <Pressable onPress={press} style={[styles.voteBtn, voted && styles.voteBtnActive]}>
-      <Animated.Text style={[styles.voteIcon, { transform: [{ scale }] }, voted && styles.voteIconActive]}>▲</Animated.Text>
-      <Text style={[styles.voteCount, voted && styles.voteCountActive]}>{count}</Text>
+    <Pressable 
+      onPress={press} 
+      style={[
+        styles.voteBtn, 
+        { borderColor: theme.colors.border },
+        voted && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '22' }
+      ]}
+    >
+      <Animated.Text style={[styles.voteIcon, { transform: [{ scale }], color: voted ? theme.colors.primary : theme.colors.textMuted }]}>▲</Animated.Text>
+      <Text style={[styles.voteCount, { color: voted ? theme.colors.primary : theme.colors.textMuted }]}>{count}</Text>
     </Pressable>
   );
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState() {
+function EmptyState({ theme }: { theme: any }) {
   return (
-    <View style={styles.empty}>
+    <View style={[styles.empty, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
       <Text style={styles.emptyEmoji}>💬</Text>
-      <Text style={styles.emptyTitle}>A comunidade está quieta</Text>
-      <Text style={styles.emptySub}>Ninguém postou nada ainda em Caxias. Seja o primeiro a relatar um problema!</Text>
+      <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>A comunidade está quieta</Text>
+      <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>Ninguém postou nada ainda em Caxias. Seja o primeiro a relatar um problema!</Text>
     </View>
   );
 }
 
 // ── Feed card ─────────────────────────────────────────────────────────────────
-function FeedCard({ item, delay, onVote, ticker }: { item: any; delay: number; onVote: () => void; ticker: number }) {
+function FeedCard({ item, delay, onVote, ticker, theme }: { item: any; delay: number; onVote: () => void; ticker: number; theme: any }) {
   const anim = useRef(new Animated.Value(0)).current;
   const [expanded, setExpanded] = useState(false);
 
@@ -64,13 +72,13 @@ function FeedCard({ item, delay, onVote, ticker }: { item: any; delay: number; o
   }, [anim, delay]);
 
   return (
-    <Animated.View style={[styles.card, { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
+    <Animated.View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border, opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }]}>
       <View style={styles.cardHeader}>
         <View style={styles.userRow}>
           <UserAvatar user={{ name: item.userName, avatar: item.userAvatar, isCustomAvatar: item.isCustomAvatar }} size={36} />
           <View>
-            <Text style={styles.userName}>{item.userName}</Text>
-            <Text style={styles.userTime}>{getRelativeTime(item.createdAt)} · {item.street}</Text>
+            <Text style={[styles.userName, { color: theme.colors.textPrimary }]}>{item.userName}</Text>
+            <Text style={[styles.userTime, { color: theme.colors.textMuted }]}>{getRelativeTime(item.createdAt)} · {item.street}</Text>
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: item.severityColor + '22', borderColor: item.severityColor + '55' }]}>
@@ -81,9 +89,9 @@ function FeedCard({ item, delay, onVote, ticker }: { item: any; delay: number; o
       <View style={[styles.severityStripe, { backgroundColor: item.severityColor }]} />
 
       <Pressable onPress={() => setExpanded(!expanded)} style={styles.descContainer}>
-        <Text style={styles.desc} numberOfLines={expanded ? undefined : 2}>{item.description}</Text>
+        <Text style={[styles.desc, { color: theme.colors.textSecondary }]} numberOfLines={expanded ? undefined : 2}>{item.description}</Text>
         {item.description.length > 80 && (
-          <Text style={styles.readMore}>{expanded ? 'Ver menos ↑' : 'Ver mais ↓'}</Text>
+          <Text style={[styles.readMore, { color: theme.colors.textMuted }]}>{expanded ? 'Ver menos ↑' : 'Ver mais ↓'}</Text>
         )}
       </Pressable>
 
@@ -95,14 +103,14 @@ function FeedCard({ item, delay, onVote, ticker }: { item: any; delay: number; o
         </ScrollView>
       )}
 
-      <View style={styles.actions}>
-        <VoteBtn count={item.votes} onVote={onVote} />
+      <View style={[styles.actions, { borderTopColor: theme.colors.border }]}>
+        <VoteBtn count={item.votes} onVote={onVote} theme={theme} />
         <Pressable style={styles.commentBtn}>
           <Text style={styles.commentIcon}>💬</Text>
-          <Text style={styles.commentCount}>{item.comments}</Text>
+          <Text style={[styles.commentCount, { color: theme.colors.textMuted }]}>{item.comments}</Text>
         </Pressable>
         <Pressable style={styles.shareBtn}>
-          <Text style={styles.shareText}>Compartilhar</Text>
+          <Text style={[styles.shareText, { color: theme.colors.primary }]}>Compartilhar</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -112,14 +120,13 @@ function FeedCard({ item, delay, onVote, ticker }: { item: any; delay: number; o
 // ── Main screen ───────────────────────────────────────────────────────────────
 export const FeedScreen = () => {
   const { reports, voteReport } = useReports();
+  const { theme } = useTheme();
   const [activeFilter, setFilter] = useState('Todos');
   const headerAnim = useRef(new Animated.Value(0)).current;
   const [ticker, setTicker] = useState(0);
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-    
-    // Auto-refresh every 30s
     const interval = setInterval(() => setTicker(t => t + 1), 30000);
     return () => clearInterval(interval);
   }, [headerAnim]);
@@ -129,15 +136,23 @@ export const FeedScreen = () => {
     : reports.filter(r => r.status.toLowerCase() === activeFilter.toLowerCase().replace('s', ''));
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <Animated.View style={[styles.stickyHeader, { opacity: headerAnim }]}>
-        <Text style={styles.screenTitle}>Comunidade</Text>
-        <Text style={styles.screenSub}>{reports.length} reportes em Caxias</Text>
+        <Text style={[styles.screenTitle, { color: theme.colors.textPrimary }]}>Comunidade</Text>
+        <Text style={[styles.screenSub, { color: theme.colors.textSecondary }]}>{reports.length} reportes em Caxias</Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
           {FILTERS.map(f => (
-            <Pressable key={f} onPress={() => setFilter(f)} style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}>
-              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
+            <Pressable 
+              key={f} 
+              onPress={() => setFilter(f)} 
+              style={[
+                styles.filterChip, 
+                { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border },
+                activeFilter === f && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '22' }
+              ]}
+            >
+              <Text style={[styles.filterText, { color: theme.colors.textSecondary }, activeFilter === f && { color: theme.colors.primary }]}>{f}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -145,10 +160,10 @@ export const FeedScreen = () => {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
         {reports.length === 0 ? (
-          <EmptyState />
+          <EmptyState theme={theme} />
         ) : (
           filtered.map((item, i) => (
-            <FeedCard key={item.id} item={item} delay={100 + i * 80} onVote={() => voteReport(item.id)} ticker={ticker} />
+            <FeedCard key={item.id} item={item} delay={100 + i * 80} onVote={() => voteReport(item.id)} ticker={ticker} theme={theme} />
           ))
         )}
       </ScrollView>
@@ -157,44 +172,39 @@ export const FeedScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safe:         { flex: 1, backgroundColor: theme.colors.background },
-  stickyHeader: { paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.md, paddingBottom: theme.spacing.sm },
-  screenTitle:  { fontSize: 24, color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold },
-  screenSub:    { fontSize: 12, color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, marginTop: 2, marginBottom: theme.spacing.md },
-  filtersRow:   { flexDirection: 'row', gap: theme.spacing.sm, paddingBottom: 4 },
-  filterChip:   { paddingHorizontal: theme.spacing.md, paddingVertical: 6, borderRadius: theme.radii.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface1 },
-  filterChipActive: { borderColor: theme.colors.primary, backgroundColor: 'rgba(249,115,22,0.12)' },
-  filterText:   { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },
-  filterTextActive: { color: theme.colors.primary },
+  safe:         { flex: 1 },
+  stickyHeader: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
+  screenTitle:  { fontSize: 24, fontFamily: 'Inter-SemiBold' },
+  screenSub:    { fontSize: 12, fontFamily: 'Inter-Regular', marginTop: 2, marginBottom: 16 },
+  filtersRow:   { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  filterChip:   { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
+  filterText:   { fontFamily: 'Inter-Medium', fontSize: 12 },
   scroll:       { flex: 1 },
-  feedContent:  { padding: theme.spacing.lg, paddingTop: theme.spacing.md, gap: theme.spacing.md, paddingBottom: 32 },
-  card:         { backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' },
-  cardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: theme.spacing.md, paddingBottom: 0 },
-  userRow:      { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  userName:     { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.medium, fontSize: 13 },
-  userTime:     { color: theme.colors.textMuted, fontSize: 11, fontFamily: theme.typography.fontFamily.regular, marginTop: 1 },
-  statusBadge:  { paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radii.full, borderWidth: 1 },
-  statusText:   { fontSize: 10, fontFamily: theme.typography.fontFamily.medium },
-  severityStripe: { height: 3, marginTop: theme.spacing.sm },
-  descContainer:{ paddingHorizontal: theme.spacing.md, paddingTop: theme.spacing.sm },
-  desc:         { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, fontSize: 13, lineHeight: 20 },
-  readMore:     { color: theme.colors.textMuted, fontSize: 11, fontFamily: theme.typography.fontFamily.medium, marginTop: 4, marginBottom: theme.spacing.sm },
-  imageGallery: { paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.md, gap: theme.spacing.sm },
-  galleryImage: { width: width * 0.7, height: 180, borderRadius: theme.radii.lg },
-  actions:      { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: theme.colors.border, padding: theme.spacing.sm, paddingHorizontal: theme.spacing.md, gap: theme.spacing.md },
-  voteBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: theme.radii.full, borderWidth: 1, borderColor: theme.colors.border },
-  voteBtnActive:{ borderColor: theme.colors.primary, backgroundColor: 'rgba(249,115,22,0.12)' },
-  voteIcon:     { color: theme.colors.textMuted, fontSize: 11 },
-  voteIconActive:{ color: theme.colors.primary },
-  voteCount:    { color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },
-  voteCountActive: { color: theme.colors.primary },
+  feedContent:  { padding: 24, paddingTop: 16, gap: 16, paddingBottom: 32 },
+  card:         { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  cardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 16, paddingBottom: 0 },
+  userRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  userName:     { fontFamily: 'Inter-Medium', fontSize: 13 },
+  userTime:     { fontSize: 11, fontFamily: 'Inter-Regular', marginTop: 1 },
+  statusBadge:  { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9999, borderWidth: 1 },
+  statusText:   { fontSize: 10, fontFamily: 'Inter-Medium' },
+  severityStripe: { height: 3, marginTop: 8 },
+  descContainer:{ paddingHorizontal: 16, paddingTop: 8 },
+  desc:         { fontFamily: 'Inter-Regular', fontSize: 13, lineHeight: 20 },
+  readMore:     { fontSize: 11, fontFamily: 'Inter-Medium', marginTop: 4, marginBottom: 8 },
+  imageGallery: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  galleryImage: { width: width * 0.7, height: 180, borderRadius: 12 },
+  actions:      { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, padding: 8, paddingHorizontal: 16, gap: 16 },
+  voteBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
+  voteIcon:     { fontSize: 11 },
+  voteCount:    { fontFamily: 'Inter-Medium', fontSize: 12 },
   commentBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   commentIcon:  { fontSize: 14 },
-  commentCount: { color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.regular, fontSize: 12 },
+  commentCount: { fontFamily: 'Inter-Regular', fontSize: 12 },
   shareBtn:     { marginLeft: 'auto' },
-  shareText:    { color: theme.colors.primary, fontFamily: theme.typography.fontFamily.medium, fontSize: 12 },
-  empty:       { alignItems: 'center', padding: theme.spacing.xl, backgroundColor: theme.colors.surface1, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.sm, marginTop: 40 },
+  shareText:    { fontFamily: 'Inter-Medium', fontSize: 12 },
+  empty:       { alignItems: 'center', padding: 32, borderRadius: 16, borderWidth: 1, gap: 8, marginTop: 40 },
   emptyEmoji:  { fontSize: 40 },
-  emptyTitle:  { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamily.semiBold, fontSize: 16 },
-  emptySub:    { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamily.regular, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  emptyTitle:  { fontFamily: 'Inter-SemiBold', fontSize: 16 },
+  emptySub:    { fontFamily: 'Inter-Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });
