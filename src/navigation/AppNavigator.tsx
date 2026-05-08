@@ -1,32 +1,43 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { HomeScreen }    from '../screens/HomeScreen';
 import { ReportScreen }  from '../screens/ReportScreen';
 import { FeedScreen }    from '../screens/FeedScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { useTheme } from '../context/ThemeContext';
-import { theme } from '../theme/tokens';
 
 const Tab = createBottomTabNavigator();
 
-const ICONS: Record<string, { default: string; active: string }> = {
-  Início:    { default: '🗺️', active: '🗺️' },
-  Reportar:  { default: '＋',   active: '＋' },
-  Comunidade:{ default: '💬',  active: '💬' },
-  Perfil:    { default: '👤',  active: '👤' },
+const ICONS: Record<string, string> = {
+  Início:     'map',
+  Reportar:   'plus',
+  Comunidade: 'message-square',
+  Perfil:     'user',
 };
 
 function TabIcon({ name, focused, theme }: { name: string; focused: boolean; theme: any }) {
   const isReport = name === 'Reportar';
+  const iconName = ICONS[name] as any;
+
   if (isReport) {
     return (
       <View style={[styles.reportFab, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary }]}>
-        <Text style={styles.reportFabIcon}>＋</Text>
+        <Feather name="plus" size={26} color="#FFF" />
       </View>
     );
   }
-  return <Text style={[styles.icon, focused && styles.iconActive, { color: focused ? theme.colors.primary : theme.colors.textMuted }]}>{ICONS[name]?.default ?? '●'}</Text>;
+
+  return (
+    <View style={styles.iconWrapper}>
+      <Feather 
+        name={iconName} 
+        size={20} 
+        color={focused ? theme.colors.primary : theme.colors.textMuted} 
+      />
+    </View>
+  );
 }
 
 export function AppNavigator() {
@@ -37,11 +48,11 @@ export function AppNavigator() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: theme.colors.surface1, borderTopColor: theme.colors.border }],
-        tabBarItemStyle: styles.tabItem,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} theme={theme} />,
+        tabBarHideOnKeyboard: true,
       })}
     >
       <Tab.Screen name="Início"     component={HomeScreen}    />
@@ -54,31 +65,38 @@ export function AppNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 72,
-    paddingBottom: 12,
-    paddingTop: 8,
+    height: 58,
+    paddingBottom: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  tabItem: { height: 56 },
   tabLabel: {
     fontSize: 10,
     fontFamily: 'Inter-Medium',
-    marginTop: -2,
+    marginTop: 0,
   },
-  icon:     { fontSize: 22 },
-  iconActive: { transform: [{ scale: 1.1 }] },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 24,
+  },
   reportFab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  reportFabIcon: { color: '#FFF', fontSize: 28, lineHeight: 34, fontWeight: '300' },
 });
+
+
+
+
 

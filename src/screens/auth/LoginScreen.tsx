@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { BeamButton } from '../../components/BeamButton';
@@ -48,7 +49,7 @@ function Field({
         />
         {secure && (
           <Pressable onPress={() => setShowPwd(!showPwd)} style={styles.eyeBtn}>
-            <Text style={styles.eyeIcon}>{showPwd ? '🙈' : '👁️'}</Text>
+            <Feather name={showPwd ? 'eye-off' : 'eye'} size={18} color={theme.colors.textMuted} />
           </Pressable>
         )}
       </Animated.View>
@@ -96,7 +97,7 @@ export function LoginScreen({ navigation }: Props) {
             {/* Logo / brand */}
             <View style={styles.brand}>
               <View style={[styles.logoCircle, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary + '44' }]}>
-                <Text style={styles.logoEmoji}>🕳️</Text>
+                <Feather name="map-pin" size={32} color={theme.colors.primary} />
               </View>
               <Text style={[styles.logoTitle, { color: theme.colors.textPrimary }]}>Caxias Buracos</Text>
               <Text style={[styles.logoSub, { color: theme.colors.textSecondary }]}>Conecte-se para contribuir</Text>
@@ -124,14 +125,16 @@ export function LoginScreen({ navigation }: Props) {
               />
 
               {!!error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️  {error}</Text>
+                <View style={[styles.errorBox, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.05)' }]}>
+                  <Feather name="alert-circle" size={14} color="#EF4444" style={{ marginRight: 8 }} />
+                  <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
 
               <BeamButton
                 title={loading ? 'Entrando...' : 'Entrar'}
                 isPrimary
+                iconRight={loading ? undefined : 'log-in'}
                 style={styles.submitBtn}
                 onPress={handleLogin}
               />
@@ -149,8 +152,9 @@ export function LoginScreen({ navigation }: Props) {
             <Pressable onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
               <Text style={[styles.registerText, { color: theme.colors.textSecondary }]}>
                 Não tem conta?{' '}
-                <Text style={[styles.registerHighlight, { color: theme.colors.primary }]}>Criar conta gratuita →</Text>
+                <Text style={[styles.registerHighlight, { color: theme.colors.primary }]}>Criar conta gratuita</Text>
               </Text>
+              <Feather name="arrow-right" size={14} color={theme.colors.primary} style={{ marginLeft: 4 }} />
             </Pressable>
 
           </Animated.View>
@@ -169,7 +173,6 @@ const styles = StyleSheet.create({
 
   brand:       { alignItems: 'center', gap: 8 },
   logoCircle:  { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.4)', justifyContent: 'center', alignItems: 'center' },
-  logoEmoji:   { fontSize: 32 },
   logoTitle:   { fontSize: 24, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
   logoSub:     { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular },
 
@@ -181,10 +184,9 @@ const styles = StyleSheet.create({
   fieldBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1.5, paddingHorizontal: staticTheme.spacing.md },
   fieldInput:  { flex: 1, color: staticTheme.colors.textPrimary, fontSize: 15, fontFamily: staticTheme.typography.fontFamily.regular, paddingVertical: 13 },
   eyeBtn:      { padding: 4 },
-  eyeIcon:     { fontSize: 16 },
 
-  errorBox:    { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: staticTheme.spacing.sm },
-  errorText:   { color: '#EF4444', fontSize: 13, fontFamily: staticTheme.typography.fontFamily.regular },
+  errorBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: staticTheme.spacing.sm },
+  errorText:   { color: '#EF4444', fontSize: 13, fontFamily: staticTheme.typography.fontFamily.regular, flex: 1 },
 
   submitBtn:   { marginTop: 4 },
 
@@ -192,7 +194,8 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: staticTheme.colors.border },
   dividerText: { color: staticTheme.colors.textMuted, fontSize: 12, fontFamily: staticTheme.typography.fontFamily.regular },
 
-  registerLink:   { alignItems: 'center' },
+  registerLink:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   registerText:   { color: staticTheme.colors.textSecondary, fontSize: 14, fontFamily: staticTheme.typography.fontFamily.regular },
   registerHighlight: { color: staticTheme.colors.primary, fontFamily: staticTheme.typography.fontFamily.semiBold },
 });
+

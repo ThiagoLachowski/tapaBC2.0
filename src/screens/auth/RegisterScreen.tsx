@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
@@ -54,7 +55,7 @@ function Field({ label, placeholder, value, onChangeText, secure = false, keyboa
         />
         {secure && (
           <Pressable onPress={() => setShowPwd(!showPwd)} style={{ padding: 4 }}>
-            <Text style={{ fontSize: 16 }}>{showPwd ? '🙈' : '👁️'}</Text>
+            <Feather name={showPwd ? 'eye-off' : 'eye'} size={18} color={theme.colors.textMuted} />
           </Pressable>
         )}
       </Animated.View>
@@ -121,7 +122,8 @@ export function RegisterScreen({ navigation }: Props) {
 
             <View style={styles.header}>
               <Pressable onPress={() => step === 1 ? setStep(0) : navigation.goBack()} style={styles.backBtn}>
-                <Text style={[styles.backText, { color: theme.colors.primary }]}>← Voltar</Text>
+                <Feather name="arrow-left" size={16} color={theme.colors.primary} />
+                <Text style={[styles.backText, { color: theme.colors.primary, marginLeft: 4 }]}>Voltar</Text>
               </Pressable>
               <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>{step === 0 ? 'Criar conta' : 'Foto de perfil'}</Text>
               <Text style={[styles.headerSub, { color: theme.colors.textSecondary }]}>{step === 0 ? 'Preencha suas informações' : 'Escolha como te reconhecer'}</Text>
@@ -133,8 +135,13 @@ export function RegisterScreen({ navigation }: Props) {
                 <Field label="E-mail" placeholder="seu@email.com" value={email} onChangeText={setEmail} keyboardType="email-address" theme={theme} />
                 <Field label="Senha" placeholder="Mínimo 6 caracteres" value={password} onChangeText={setPassword} secure theme={theme} />
                 <Field label="Confirmar senha" placeholder="Repita sua senha" value={confirm} onChangeText={setConfirm} secure theme={theme} />
-                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text></View>}
-                <BeamButton title="Próximo →" isPrimary style={styles.btn} onPress={() => {
+                {!!error && (
+                  <View style={[styles.errorBox, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.05)' }]}>
+                    <Feather name="alert-circle" size={14} color="#EF4444" style={{ marginRight: 8 }} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+                <BeamButton title="Próximo" isPrimary iconRight="arrow-right" style={styles.btn} onPress={() => {
                   if(!name || !email || password.length < 6 || password !== confirm) {
                     setError('Verifique os campos acima.'); return;
                   }
@@ -155,7 +162,7 @@ export function RegisterScreen({ navigation }: Props) {
                   </View>
                   
                   <Pressable style={[styles.galleryBtn, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }]} onPress={pickImage}>
-                    <Text style={styles.galleryBtnIcon}>🖼️</Text>
+                    <Feather name="image" size={18} color={theme.colors.primary} />
                     <Text style={[styles.galleryBtnText, { color: theme.colors.textPrimary }]}>Escolher da Galeria</Text>
                   </Pressable>
 
@@ -167,7 +174,7 @@ export function RegisterScreen({ navigation }: Props) {
                   </View>
                 </View>
 
-                <BeamButton title={loading ? 'Criando conta...' : 'Criar minha conta ✓'} isPrimary style={styles.btn} onPress={handleRegister} />
+                <BeamButton title={loading ? 'Criando conta...' : 'Criar minha conta'} iconRight="check" isPrimary style={styles.btn} onPress={handleRegister} />
               </View>
             )}
 
@@ -183,7 +190,7 @@ const styles = StyleSheet.create({
   scroll:   { flexGrow: 1, justifyContent: 'center', padding: staticTheme.spacing.lg },
   container:{ gap: staticTheme.spacing.lg },
   header:     { gap: 4 },
-  backBtn:    { alignSelf: 'flex-start', marginBottom: 8 },
+  backBtn:    { alignSelf: 'flex-start', marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   backText:   { color: staticTheme.colors.primary, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 14 },
   headerTitle:{ fontSize: 22, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
   headerSub:  { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular },
@@ -192,15 +199,14 @@ const styles = StyleSheet.create({
   fieldLabel:  { fontSize: 12, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   fieldBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1.5, paddingHorizontal: staticTheme.spacing.md },
   fieldInput:  { flex: 1, color: staticTheme.colors.textPrimary, fontSize: 15, fontFamily: staticTheme.typography.fontFamily.regular, paddingVertical: 13 },
-  errorBox:   { backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: staticTheme.spacing.sm },
-  errorText:  { color: '#EF4444', fontSize: 13, fontFamily: staticTheme.typography.fontFamily.regular },
+  errorBox:   { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', padding: staticTheme.spacing.sm },
+  errorText:  { color: '#EF4444', fontSize: 13, fontFamily: staticTheme.typography.fontFamily.regular, flex: 1 },
   btn:        { marginTop: 4 },
   avatarSection:   { alignItems: 'center', gap: staticTheme.spacing.md },
   avatarPreview:   { width: 96, height: 96, borderRadius: 48, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' },
   avatarImg:       { width: '100%', height: '100%' },
   avatarPreviewText:{ color: '#FFF', fontSize: 30, fontFamily: staticTheme.typography.fontFamily.semiBold },
   galleryBtn:      { flexDirection: 'row', alignItems: 'center', backgroundColor: staticTheme.colors.surface2, paddingVertical: 10, paddingHorizontal: 16, borderRadius: staticTheme.radii.full, borderWidth: 1, borderColor: staticTheme.colors.border, gap: 8 },
-  galleryBtnIcon:  { fontSize: 18 },
   galleryBtnText:  { color: staticTheme.colors.textPrimary, fontSize: 13, fontFamily: staticTheme.typography.fontFamily.medium },
   avatarHint:      { color: staticTheme.colors.textMuted, fontSize: 12, fontFamily: staticTheme.typography.fontFamily.regular, marginTop: 8 },
   avatarGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: staticTheme.spacing.sm, justifyContent: 'center' },

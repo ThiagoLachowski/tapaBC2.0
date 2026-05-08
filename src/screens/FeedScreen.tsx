@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useReports } from '../context/ReportsContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
@@ -45,7 +46,9 @@ function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; 
         voted && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '22' }
       ]}
     >
-      <Animated.Text style={[styles.voteIcon, { transform: [{ scale }], color: voted ? theme.colors.primary : theme.colors.textMuted }]}>▲</Animated.Text>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Feather name="chevron-up" size={16} color={voted ? theme.colors.primary : theme.colors.textMuted} />
+      </Animated.View>
       <Text style={[styles.voteCount, { color: voted ? theme.colors.primary : theme.colors.textMuted }]}>{count}</Text>
     </Pressable>
   );
@@ -55,7 +58,7 @@ function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; 
 function EmptyState({ theme }: { theme: any }) {
   return (
     <View style={[styles.empty, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
-      <Text style={styles.emptyEmoji}>💬</Text>
+      <Feather name="message-square" size={40} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
       <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>A comunidade está quieta</Text>
       <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>Ninguém postou nada ainda em Caxias. Seja o primeiro a relatar um problema!</Text>
     </View>
@@ -91,7 +94,10 @@ function FeedCard({ item, delay, onVote, ticker, theme }: { item: any; delay: nu
       <Pressable onPress={() => setExpanded(!expanded)} style={styles.descContainer}>
         <Text style={[styles.desc, { color: theme.colors.textSecondary }]} numberOfLines={expanded ? undefined : 2}>{item.description}</Text>
         {item.description.length > 80 && (
-          <Text style={[styles.readMore, { color: theme.colors.textMuted }]}>{expanded ? 'Ver menos ↑' : 'Ver mais ↓'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 8 }}>
+            <Text style={[styles.readMore, { color: theme.colors.textMuted, marginRight: 4 }]}>{expanded ? 'Ver menos' : 'Ver mais'}</Text>
+            <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={theme.colors.textMuted} />
+          </View>
         )}
       </Pressable>
 
@@ -106,7 +112,7 @@ function FeedCard({ item, delay, onVote, ticker, theme }: { item: any; delay: nu
       <View style={[styles.actions, { borderTopColor: theme.colors.border }]}>
         <VoteBtn count={item.votes} onVote={onVote} theme={theme} />
         <Pressable style={styles.commentBtn}>
-          <Text style={styles.commentIcon}>💬</Text>
+          <Feather name="message-square" size={16} color={theme.colors.textMuted} />
           <Text style={[styles.commentCount, { color: theme.colors.textMuted }]}>{item.comments}</Text>
         </Pressable>
         <Pressable style={styles.shareBtn}>
@@ -191,20 +197,18 @@ const styles = StyleSheet.create({
   severityStripe: { height: 3, marginTop: 8 },
   descContainer:{ paddingHorizontal: 16, paddingTop: 8 },
   desc:         { fontFamily: 'Inter-Regular', fontSize: 13, lineHeight: 20 },
-  readMore:     { fontSize: 11, fontFamily: 'Inter-Medium', marginTop: 4, marginBottom: 8 },
-  imageGallery: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  readMore:     { fontSize: 11, fontFamily: 'Inter-Medium' },
+  imageGallery: { paddingHorizontal: 16, paddingBottom: 16, gap: 8, marginTop: 8 },
   galleryImage: { width: width * 0.7, height: 180, borderRadius: 12 },
   actions:      { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, padding: 8, paddingHorizontal: 16, gap: 16 },
   voteBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
-  voteIcon:     { fontSize: 11 },
   voteCount:    { fontFamily: 'Inter-Medium', fontSize: 12 },
   commentBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  commentIcon:  { fontSize: 14 },
   commentCount: { fontFamily: 'Inter-Regular', fontSize: 12 },
   shareBtn:     { marginLeft: 'auto' },
   shareText:    { fontFamily: 'Inter-Medium', fontSize: 12 },
   empty:       { alignItems: 'center', padding: 32, borderRadius: 16, borderWidth: 1, gap: 8, marginTop: 40 },
-  emptyEmoji:  { fontSize: 40 },
   emptyTitle:  { fontFamily: 'Inter-SemiBold', fontSize: 16 },
   emptySub:    { fontFamily: 'Inter-Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });
+

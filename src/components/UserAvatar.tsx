@@ -41,5 +41,8 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#FFF',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

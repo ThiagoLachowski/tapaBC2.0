@@ -10,20 +10,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
 import { useTheme } from '../context/ThemeContext';
-import { theme } from '../theme/tokens';
 
 const ACHIEVEMENTS = [
-  { id: '1', icon: '🏅', label: 'Primeiro Reporte',   done: false },
-  { id: '2', icon: '🔟',  label: '10 Reportes',        done: false },
-  { id: '3', icon: '🌟',  label: '5 Resolvidos',       done: false },
-  { id: '4', icon: '🗺️', label: 'Mapeou o Bairro',    done: false },
-  { id: '5', icon: '🚀',  label: '50 Reportes',        done: false },
-  { id: '6', icon: '👑',  label: 'Top Contribuidor',   done: false },
+  { id: '1', icon: 'award', label: 'Primeiro Reporte',   done: false },
+  { id: '2', icon: 'hash',  label: '10 Reportes',        done: false },
+  { id: '3', icon: 'star',  label: '5 Resolvidos',       done: false },
+  { id: '4', icon: 'map',   label: 'Mapeou o Bairro',    done: false },
+  { id: '5', icon: 'rocket', label: '50 Reportes',        done: false },
+  { id: '6', icon: 'crown',  label: 'Top Contribuidor',   done: false },
 ];
 
 function AnimRow({ children, delay }: { children: React.ReactNode; delay: number }) {
@@ -73,11 +73,11 @@ export const ProfileScreen = () => {
   });
 
   const MENU_ITEMS = [
-    { icon: '🔔', label: 'Notificações',       sub: 'Novidades dos seus reportes' },
-    { icon: '🛡️', label: 'Privacidade',       sub: 'Gerencie seus dados' },
-    { icon: '💬', label: 'Feedback',           sub: 'Nos ajude a melhorar' },
-    { icon: '❓', label: 'Ajuda e Suporte',   sub: 'Dúvidas frequentes' },
-    { icon: '🚪', label: 'Sair',              sub: 'Encerrar sessão', danger: true, onPress: logout },
+    { icon: 'bell', label: 'Notificações',       sub: 'Novidades dos seus reportes' },
+    { icon: 'shield', label: 'Privacidade',       sub: 'Gerencie seus dados' },
+    { icon: 'message-circle', label: 'Feedback',           sub: 'Nos ajude a melhorar' },
+    { icon: 'help-circle', label: 'Ajuda e Suporte',   sub: 'Dúvidas frequentes' },
+    { icon: 'log-out', label: 'Sair',              sub: 'Encerrar sessão', danger: true, onPress: logout },
   ];
 
   return (
@@ -92,7 +92,8 @@ export const ProfileScreen = () => {
               <Text style={[styles.heroName, { color: theme.colors.textPrimary }]}>{user.name}</Text>
               <Text style={[styles.heroHandle, { color: theme.colors.textMuted }]}>{user.handle}</Text>
               <View style={[styles.rankBadge, { backgroundColor: theme.colors.primary + '22', borderColor: theme.colors.primary + '55' }]}>
-                <Text style={[styles.rankText, { color: theme.colors.primary }]}>⭐ Guardião de Ruas</Text>
+                <Feather name="star" size={12} color={theme.colors.primary} style={{ marginRight: 4 }} />
+                <Text style={[styles.rankText, { color: theme.colors.primary }]}>Guardião de Ruas</Text>
               </View>
             </View>
           </View>
@@ -159,9 +160,15 @@ export const ProfileScreen = () => {
             <View style={styles.achievGrid}>
               {dynamicAchievements.map((a) => (
                 <View key={a.id} style={[styles.achievBadge, !a.done && { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }, a.done && { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary + '44' }]}>
-                  <Text style={[styles.achievIcon, !a.done && { opacity: 0.3 }]}>{a.icon}</Text>
+                  <View style={[styles.achievIconWrapper, !a.done && { opacity: 0.3 }]}>
+                    <Feather name={a.icon as any} size={24} color={a.done ? theme.colors.primary : theme.colors.textMuted} />
+                  </View>
                   <Text style={[styles.achievLabel, { color: a.done ? theme.colors.textSecondary : theme.colors.textMuted }]}>{a.label}</Text>
-                  {!a.done && <Text style={styles.lockIcon}>🔒</Text>}
+                  {!a.done && (
+                    <View style={styles.lockIcon}>
+                      <Feather name="lock" size={10} color={theme.colors.textMuted} />
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -176,18 +183,24 @@ export const ProfileScreen = () => {
                 onPress={item.onPress}
                 style={[styles.menuRow, i < MENU_ITEMS.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}
               >
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuIconWrapper}>
+                  <Feather name={item.icon as any} size={20} color={item.danger ? '#EF4444' : theme.colors.primary} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.menuLabel, { color: item.danger ? '#EF4444' : theme.colors.textPrimary }]}>{item.label}</Text>
                   <Text style={[styles.menuSub, { color: theme.colors.textMuted }]}>{item.sub}</Text>
                 </View>
-                <Text style={[styles.menuArrow, { color: theme.colors.textMuted }]}>›</Text>
+                <Feather name="chevron-right" size={20} color={theme.colors.textMuted} />
               </Pressable>
             ))}
           </View>
         </AnimRow>
 
-        <Text style={[styles.versionText, { color: theme.colors.textMuted }]}>Caxias Buracos v2.0 · Feito com ❤️ em Caxias</Text>
+        <View style={styles.footerRow}>
+          <Text style={[styles.versionText, { color: theme.colors.textMuted }]}>Caxias Buracos v2.0 · Feito com </Text>
+          <Feather name="heart" size={10} color="#EF4444" />
+          <Text style={[styles.versionText, { color: theme.colors.textMuted }]}> em Caxias</Text>
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -202,7 +215,7 @@ const styles = StyleSheet.create({
   heroInfo:  { flex: 1, gap: 4 },
   heroName:  { fontSize: 18, fontFamily: 'Inter-SemiBold' },
   heroHandle:{ fontSize: 12, fontFamily: 'Inter-Regular' },
-  rankBadge: { borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start', borderWidth: 1, marginTop: 2 },
+  rankBadge: { flexDirection: 'row', alignItems: 'center', borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start', borderWidth: 1, marginTop: 2 },
   rankText:  { fontSize: 11, fontFamily: 'Inter-Medium' },
   statsRow:   { flexDirection: 'row', borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   statBox:    { flex: 1, alignItems: 'center', paddingVertical: 16 },
@@ -223,14 +236,15 @@ const styles = StyleSheet.create({
   progressLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   progressLabel:  { fontSize: 11, fontFamily: 'Inter-Regular' },
   achievGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  achievBadge: { width: '30%', alignItems: 'center', borderRadius: 12, borderWidth: 1, padding: 8, gap: 4 },
-  achievIcon:  { fontSize: 24 },
+  achievBadge: { width: '30%', alignItems: 'center', borderRadius: 12, borderWidth: 1, padding: 8, gap: 4, position: 'relative' },
+  achievIconWrapper: { height: 32, justifyContent: 'center', alignItems: 'center' },
   achievLabel: { fontSize: 10, fontFamily: 'Inter-Medium', textAlign: 'center' },
-  lockIcon:    { fontSize: 10 },
-  menuRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 16 },
-  menuIcon:      { fontSize: 20, width: 28, textAlign: 'center' },
+  lockIcon:    { position: 'absolute', top: 4, right: 4 },
+  menuRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 16 },
+  menuIconWrapper: { width: 32, alignItems: 'center' },
   menuLabel:     { fontFamily: 'Inter-Medium', fontSize: 14 },
   menuSub:       { fontSize: 11, fontFamily: 'Inter-Regular', marginTop: 1 },
-  menuArrow:     { fontSize: 20 },
-  versionText: { textAlign: 'center', fontSize: 11, fontFamily: 'Inter-Regular', marginTop: 8 },
+  versionText: { textAlign: 'center', fontSize: 11, fontFamily: 'Inter-Regular' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
 });
+

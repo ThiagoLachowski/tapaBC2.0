@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { theme as staticTheme } from '../theme/tokens';
@@ -27,10 +28,10 @@ import { useTheme } from '../context/ThemeContext';
 type Severity = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
 
 const SEVERITIES: { label: Severity; color: string; icon: string }[] = [
-  { label: 'Baixa',   color: '#22C55E', icon: '🟢' },
-  { label: 'Média',   color: '#F97316', icon: '🟡' },
-  { label: 'Alta',    color: '#EF4444', icon: '🔴' },
-  { label: 'Crítica', color: '#A855F7', icon: '🚨' },
+  { label: 'Baixa',   color: '#22C55E', icon: 'circle' },
+  { label: 'Média',   color: '#F97316', icon: 'circle' },
+  { label: 'Alta',    color: '#EF4444', icon: 'circle' },
+  { label: 'Crítica', color: '#A855F7', icon: 'alert-triangle' },
 ];
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ function StepDot({ active, done, n, theme }: { active: boolean; done: boolean; n
       done && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary }
     ]}>
       {done
-        ? <Text style={[styles.stepDotText, { color: '#FFF' }]}>✓</Text>
+        ? <Feather name="check" size={14} color="#FFF" />
         : <Text style={[styles.stepDotText, { color: active ? theme.colors.primary : theme.colors.textPrimary }]}>{n}</Text>
       }
     </View>
@@ -107,7 +108,7 @@ function PhotoModal({ visible, onClose, onTakePhoto, theme }: { visible: boolean
           <View style={styles.modalActions}>
             <Pressable style={[styles.modalActionBtn, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }]} onPress={onTakePhoto}>
               <View style={[styles.modalActionIconBox, { backgroundColor: theme.colors.primary + '22' }]}>
-                <Text style={{ fontSize: 24 }}>📸</Text>
+                <Feather name="camera" size={24} color={theme.colors.primary} />
               </View>
               <View>
                 <Text style={[styles.modalActionLabel, { color: theme.colors.textPrimary }]}>Tirar Foto</Text>
@@ -140,7 +141,7 @@ function SuccessScreen({ onReset, theme }: { onReset: () => void; theme: any }) 
   return (
     <Animated.View style={[styles.successContainer, { backgroundColor: theme.colors.background, opacity, transform: [{ scale }] }]}>
       <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '22', borderColor: theme.colors.primary + '55' }]}>
-        <Text style={{ fontSize: 40 }}>📍</Text>
+        <Feather name="map-pin" size={40} color={theme.colors.primary} />
       </View>
       <Text style={[styles.successTitle, { color: theme.colors.textPrimary }]}>Reporte enviado!</Text>
       <Text style={[styles.successSub, { color: theme.colors.textSecondary }]}>
@@ -257,35 +258,41 @@ export const ReportScreen = () => {
 
           {step === 0 && (
             <View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>📍 Onde é o buraco?</Text>
+              <View style={styles.cardTitleRow}>
+                <Feather name="map-pin" size={18} color={theme.colors.primary} />
+                <Text style={[styles.cardTitle, { color: theme.colors.textPrimary, marginLeft: 8 }]}>Onde é o buraco?</Text>
+              </View>
               
               <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Toque no mapa para marcar ou use GPS</Text>
               <View style={[styles.mapSelectionContainer, { borderColor: theme.colors.border }]}>
                 <LeafletMap 
                   center={location || { lat: -4.8622, lng: -43.3561 }}
-                  markers={location ? [{ lat: location.lat, lng: location.lng, color: theme.colors.primary }] : []}
+                  markers={location ? [{ id: 'current', lat: location.lat, lng: location.lng, color: theme.colors.primary }] : []}
                   onLocationSelect={(lat, lng) => setLocation({ lat, lng })}
                 />
                 <Pressable style={[styles.gpsBtn, { backgroundColor: theme.colors.primary }]} onPress={getMyLocation} disabled={loadingLoc}>
-                  {loadingLoc ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={{ fontSize: 20 }}>🎯</Text>}
+                  {loadingLoc ? <ActivityIndicator size="small" color="#FFF" /> : <Feather name="target" size={20} color="#FFF" />}
                 </Pressable>
               </View>
 
               <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} theme={theme} />
               <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} theme={theme} />
               
-              <BeamButton title="Próximo →" isPrimary style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
+              <BeamButton title="Próximo" isPrimary iconRight="arrow-right" style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
             </View>
           )}
 
           {step === 1 && (
             <View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
-              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>🔍 Detalhe o problema</Text>
+              <View style={styles.cardTitleRow}>
+                <Feather name="search" size={18} color={theme.colors.primary} />
+                <Text style={[styles.cardTitle, { color: theme.colors.textPrimary, marginLeft: 8 }]}>Detalhe o problema</Text>
+              </View>
               <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Gravidade</Text>
               <View style={styles.severityGrid}>
                 {SEVERITIES.map((s) => (
                   <Pressable key={s.label} onPress={() => setSeverity(s.label)} style={[styles.severityOption, { borderColor: severity === s.label ? s.color : theme.colors.border }, severity === s.label && { backgroundColor: s.color + '18' }]}>
-                    <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+                    <Feather name={s.icon as any} size={18} color={severity === s.label ? s.color : theme.colors.textMuted} />
                     <Text style={[styles.severityOptionText, { color: theme.colors.textSecondary }, severity === s.label && { color: s.color }]}>{s.label}</Text>
                   </Pressable>
                 ))}
@@ -297,19 +304,19 @@ export const ReportScreen = () => {
                   <View key={i} style={styles.photoPreviewWrapper}>
                     <Image source={{ uri }} style={styles.photoPreview} />
                     <Pressable style={[styles.photoRemove, { borderColor: theme.colors.surface1 }]} onPress={() => setImages(images.filter((_, idx) => idx !== i))}>
-                      <Text style={{ color: '#FFF', fontSize: 10 }}>✕</Text>
+                      <Feather name="x" size={12} color="#FFF" />
                     </Pressable>
                   </View>
                 ))}
                 {images.length < 3 && (
                   <Pressable style={[styles.photoSlot, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border }]} onPress={() => setModalVisible(true)}>
-                    <Text style={[styles.photoPlus, { color: theme.colors.textMuted }]}>＋</Text>
+                    <Feather name="plus" size={24} color={theme.colors.textMuted} />
                   </Pressable>
                 )}
               </View>
               <View style={styles.btnRow}>
-                <BeamButton title="← Voltar" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => goToStep(0)} />
-                <BeamButton title="Enviar ✓" isPrimary style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={handleSubmit} />
+                <BeamButton title="Voltar" iconLeft="arrow-left" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => goToStep(0)} />
+                <BeamButton title="Enviar" isPrimary iconRight="check" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={handleSubmit} />
               </View>
             </View>
           )}
@@ -337,7 +344,8 @@ const styles = StyleSheet.create({
   stepLabels:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: staticTheme.spacing.xl },
   stepLabel:   { fontSize: 10, color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.regular, textAlign: 'center', width: 60 },
   card:        { backgroundColor: staticTheme.colors.surface1, borderRadius: staticTheme.radii.xl, padding: staticTheme.spacing.lg, borderWidth: 1, borderColor: staticTheme.colors.border, gap: staticTheme.spacing.md },
-  cardTitle:   { fontSize: 17, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold, marginBottom: staticTheme.spacing.xs },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: staticTheme.spacing.xs },
+  cardTitle:   { fontSize: 17, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold },
   inputWrapper:  { gap: 6 },
   inputLabel:    { fontSize: 12, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   input:         { backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: staticTheme.colors.border, color: staticTheme.colors.textPrimary, paddingHorizontal: staticTheme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: staticTheme.typography.fontFamily.regular },
@@ -377,3 +385,4 @@ const styles = StyleSheet.create({
   modalCancel: { alignItems: 'center', padding: staticTheme.spacing.md },
   modalCancelText: { color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 14 },
 });
+

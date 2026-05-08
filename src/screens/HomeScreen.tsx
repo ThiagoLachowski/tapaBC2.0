@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -27,7 +28,9 @@ function StatCard({ label, value, icon, delay, theme }: { label: string; value: 
       { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border },
       { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }
     ]}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <View style={styles.statIconWrapper}>
+        <Feather name={icon as any} size={18} color={theme.colors.primary} />
+      </View>
       <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
     </RNAnimated.View>
@@ -38,7 +41,7 @@ function StatCard({ label, value, icon, delay, theme }: { label: string; value: 
 function EmptyState({ theme }: { theme: any }) {
   return (
     <View style={[styles.empty, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
-      <Text style={styles.emptyEmoji}>🕳️</Text>
+      <Feather name="info" size={40} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
       <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>Nenhum reporte ainda</Text>
       <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>Seja o primeiro a reportar um buraco em Caxias!</Text>
     </View>
@@ -122,7 +125,7 @@ export const HomeScreen = () => {
 
           <RNAnimated.View style={[styles.header, { opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }] }]}>
             <View>
-              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Olá, {user.name.split(' ')[0]} 👋</Text>
+              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Olá, {user.name.split(' ')[0]}</Text>
               <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Mapa de Buracos</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
@@ -130,21 +133,24 @@ export const HomeScreen = () => {
                 onPress={toggleTheme} 
                 style={[styles.themeToggle, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}
               >
-                <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
+                <Feather name={isDark ? 'sun' : 'moon'} size={20} color={theme.colors.textPrimary} />
               </TouchableOpacity>
               <UserAvatar user={user} />
             </View>
           </RNAnimated.View>
 
           <View style={styles.statsRow}>
-            <StatCard icon="📍" label="Reportados" value={reports.length} delay={100} theme={theme} />
-            <StatCard icon="🔍" label="Em análise" value={analyzing} delay={200} theme={theme} />
-            <StatCard icon="✅" label="Resolvidos" value={resolved} delay={300} theme={theme} />
+            <StatCard icon="map-pin" label="Reportados" value={reports.length} delay={100} theme={theme} />
+            <StatCard icon="search" label="Em análise" value={analyzing} delay={200} theme={theme} />
+            <StatCard icon="check-circle" label="Resolvidos" value={resolved} delay={300} theme={theme} />
           </View>
 
           {/* Ranking Section */}
           <View style={styles.rankingSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, marginBottom: 12 }]}>Top Colaboradores 🏆</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Top Colaboradores</Text>
+              <Feather name="award" size={16} color={theme.colors.primary} />
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rankingScroll}>
               {Object.values(reports.reduce((acc, r) => {
                 if (!acc[r.userName]) acc[r.userName] = { name: r.userName, avatar: r.userAvatar, isCustom: r.isCustomAvatar, count: 0 };
@@ -156,7 +162,11 @@ export const HomeScreen = () => {
                 .map((item, i) => (
                   <View key={item.name} style={[styles.rankingCard, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
                     <View style={styles.rankBadge}>
-                      <Text style={styles.rankText}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</Text>
+                      {i < 3 ? (
+                        <Feather name="award" size={16} color={i === 0 ? '#FACC15' : i === 1 ? '#94A3B8' : '#B45309'} />
+                      ) : (
+                        <Text style={[styles.rankText, { color: theme.colors.textMuted }]}>#{i+1}</Text>
+                      )}
                     </View>
                     <UserAvatar user={{ name: item.name, avatar: item.avatar, isCustomAvatar: item.isCustom }} size={48} />
                     <Text style={[styles.rankingName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{item.name.split(' ')[0]}</Text>
@@ -168,10 +178,11 @@ export const HomeScreen = () => {
             </ScrollView>
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 24 }}>
+          <View style={[styles.sectionHeaderRow, { paddingHorizontal: 24 }]}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Mapa da cidade</Text>
-            <TouchableOpacity onPress={() => setIsMapFullVisible(true)}>
-              <Text style={{ color: theme.colors.primary, fontSize: 13, fontFamily: 'Inter-Medium' }}>Ver tela cheia →</Text>
+            <TouchableOpacity onPress={() => setIsMapFullVisible(true)} style={styles.seeAllBtn}>
+              <Text style={{ color: theme.colors.primary, fontSize: 13, fontFamily: 'Inter-Medium', marginRight: 4 }}>Ver tela cheia</Text>
+              <Feather name="arrow-right" size={14} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
           
@@ -182,7 +193,7 @@ export const HomeScreen = () => {
             <LeafletMap markers={markers} interactive={false} />
             <View style={styles.mapOverlay}>
               <View style={[styles.expandBtn, { backgroundColor: theme.colors.primary }]}>
-                <Text style={{ fontSize: 16 }}>🔍</Text>
+                <Feather name="maximize-2" size={18} color="#FFF" />
               </View>
             </View>
           </Pressable>
@@ -200,7 +211,7 @@ export const HomeScreen = () => {
                   onPress={() => { setIsMapFullVisible(false); }}
                   style={[styles.closeBtn, { backgroundColor: theme.colors.surface2 }]}
                 >
-                  <Text style={{ color: theme.colors.textPrimary, fontSize: 16 }}>✕</Text>
+                  <Feather name="x" size={20} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
               <View style={{ flex: 1, position: 'relative' }}>
@@ -217,7 +228,7 @@ export const HomeScreen = () => {
             </SafeAreaView>
           </Modal>
 
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, paddingHorizontal: 24, marginBottom: 12 }]}>
             Reportes recentes{reports.length > 0 ? ` (${reports.length})` : ''}
           </Text>
           {reports.length === 0
@@ -242,22 +253,24 @@ const styles = StyleSheet.create({
   themeToggle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
   statsRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 8, marginBottom: 24 },
   statCard: { flex: 1, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1 },
-  statIcon: { fontSize: 18, marginBottom: 4 },
+  statIconWrapper: { height: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   statValue: { fontSize: 20, fontFamily: 'Inter-SemiBold' },
   statLabel: { fontSize: 10, fontFamily: 'Inter-Regular', marginTop: 2, textAlign: 'center' },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold', paddingHorizontal: 24, marginBottom: 8 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, marginBottom: 12 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center' },
+  sectionTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
   mapContainer: { marginHorizontal: 24, height: 250, borderRadius: 16, overflow: 'hidden', marginBottom: 24, borderWidth: 1, position: 'relative' },
-  reportsList: { marginHorizontal: 24, gap: 8 },
-  reportRow: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: 12, padding: 16, borderWidth: 1, gap: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  reportsList: { paddingHorizontal: 24, gap: 8 },
+  reportRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 16, borderWidth: 1, gap: 12 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
   reportStreet: { fontFamily: 'Inter-Medium', fontSize: 13 },
-  reportSub: { fontSize: 11, fontFamily: 'Inter-Regular', marginTop: 2 },
+  reportSub: { fontSize: 11, fontFamily: 'Inter-Regular', marginTop: 1 },
   miniGallery: { marginTop: 10, paddingRight: 10 },
   miniImage: { height: 120, borderRadius: 8 },
   sevBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999, borderWidth: 1, marginLeft: 8 },
   sevText: { fontSize: 10, fontFamily: 'Inter-Medium' },
   empty: { marginHorizontal: 24, alignItems: 'center', padding: 32, borderRadius: 16, borderWidth: 1, gap: 8 },
-  emptyEmoji: { fontSize: 40 },
   emptyTitle: { fontFamily: 'Inter-SemiBold', fontSize: 16 },
   emptySub: { fontFamily: 'Inter-Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
   mapOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.05)', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 12 },
@@ -266,23 +279,14 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold' },
   closeBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   modalFooter: { padding: 16, borderTopWidth: 1 },
-  previewOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, justifyContent: 'flex-end' },
-  previewCard: { borderRadius: 20, padding: 20, borderWidth: 1, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12 },
-  previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  previewStreet: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
-  previewSub: { fontSize: 13, fontFamily: 'Inter-Regular', marginTop: 2 },
-  previewClose: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  previewGallery: { marginVertical: 8 },
-  previewImage: { width: 140, height: 90, borderRadius: 12, marginRight: 8 },
-  previewFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
-  previewBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   rankingSection: { marginBottom: 24 },
   rankingScroll: { paddingHorizontal: 24, gap: 12 },
   rankingCard: { width: 120, borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, position: 'relative' },
-  rankBadge: { position: 'absolute', top: -10, left: -10, backgroundColor: 'transparent' },
-  rankText: { fontSize: 20 },
-  rankingName: { fontSize: 13, fontFamily: 'Inter-SemiBold', marginTop: 8, marginBottom: 4 },
-  reportCountBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  reportCountText: { fontSize: 10, fontFamily: 'Inter-Medium' },
+  rankBadge: { position: 'absolute', top: 4, left: 4 },
+  rankText: { fontSize: 12, fontFamily: 'Inter-SemiBold' },
+  rankingName: { fontSize: 13, fontFamily: 'Inter-SemiBold', marginTop: 8, marginBottom: 4, textAlign: 'center' },
+  reportCountBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  reportCountText: { fontSize: 10, fontFamily: 'Inter-Medium', textAlign: 'center' },
 });
+
 

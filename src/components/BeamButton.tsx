@@ -9,8 +9,8 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { theme } from '../theme/tokens';
 
 interface BeamButtonProps {
   title: string;
@@ -18,6 +18,8 @@ interface BeamButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   isPrimary?: boolean;
+  iconLeft?: string;
+  iconRight?: string;
 }
 
 export const BeamButton: React.FC<BeamButtonProps> = ({
@@ -26,6 +28,8 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
   style,
   textStyle,
   isPrimary = false,
+  iconLeft,
+  iconRight,
 }) => {
   const { theme } = useTheme();
   const rotation = useRef(new Animated.Value(0)).current;
@@ -100,6 +104,15 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
               : { backgroundColor: theme.colors.surface1 },
           ]}
         >
+          {iconLeft && (
+            <Feather 
+              name={iconLeft as any} 
+              size={16} 
+              color={isPrimary ? '#FFF' : theme.colors.textPrimary} 
+              style={{ marginRight: 8 }} 
+            />
+          )}
+          
           <Text
             style={[
               styles.text,
@@ -111,6 +124,15 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
           >
             {title}
           </Text>
+
+          {iconRight && (
+            <Feather 
+              name={iconRight as any} 
+              size={16} 
+              color={isPrimary ? '#FFF' : theme.colors.textPrimary} 
+              style={{ marginLeft: 8 }} 
+            />
+          )}
         </View>
       </Pressable>
     </Animated.View>
@@ -121,12 +143,12 @@ export const BeamButton: React.FC<BeamButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     height: 52,
-    borderRadius: theme.radii.full,
+    borderRadius: 26, // Fallback if theme.radii is not available
     overflow: 'hidden',
   },
   borderWrapper: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: theme.radii.full,
+    borderRadius: 26,
     overflow: 'hidden',
   },
   beamContent: {
@@ -138,16 +160,17 @@ const styles = StyleSheet.create({
   },
   inner: {
     margin: 2,
-    borderRadius: theme.radii.full,
+    borderRadius: 24,
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: 16,
   },
   text: {
-    fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fontFamily.medium,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
     letterSpacing: 0.3,
   },
 });
+
