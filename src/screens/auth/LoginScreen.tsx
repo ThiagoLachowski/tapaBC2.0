@@ -95,16 +95,16 @@ export function LoginScreen({ navigation }: Props) {
 
             {/* Logo / brand */}
             <View style={styles.brand}>
-              <View style={styles.logoCircle}>
+              <View style={[styles.logoCircle, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary + '44' }]}>
                 <Text style={styles.logoEmoji}>🕳️</Text>
               </View>
-              <Text style={styles.logoTitle}>Caxias Buracos</Text>
-              <Text style={styles.logoSub}>Conecte-se para contribuir</Text>
+              <Text style={[styles.logoTitle, { color: theme.colors.textPrimary }]}>Caxias Buracos</Text>
+              <Text style={[styles.logoSub, { color: theme.colors.textSecondary }]}>Conecte-se para contribuir</Text>
             </View>
 
             {/* Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Entrar na conta</Text>
+            <View style={[styles.card, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+              <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>Entrar na conta</Text>
 
               <Field
                 label="E-mail"
@@ -112,6 +112,7 @@ export function LoginScreen({ navigation }: Props) {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                theme={theme}
               />
               <Field
                 label="Senha"
@@ -119,6 +120,7 @@ export function LoginScreen({ navigation }: Props) {
                 value={password}
                 onChangeText={setPassword}
                 secure
+                theme={theme}
               />
 
               {!!error && (
@@ -138,16 +140,16 @@ export function LoginScreen({ navigation }: Props) {
 
             {/* Divider */}
             <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+              <Text style={[styles.dividerText, { color: theme.colors.textMuted }]}>ou</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
             </View>
 
             {/* Register link */}
             <Pressable onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
-              <Text style={styles.registerText}>
+              <Text style={[styles.registerText, { color: theme.colors.textSecondary }]}>
                 Não tem conta?{' '}
-                <Text style={styles.registerHighlight}>Criar conta gratuita →</Text>
+                <Text style={[styles.registerHighlight, { color: theme.colors.primary }]}>Criar conta gratuita →</Text>
               </Text>
             </Pressable>
 

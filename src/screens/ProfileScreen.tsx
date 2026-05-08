@@ -55,10 +55,20 @@ export const ProfileScreen = () => {
   const userReportsCount = userReports.length;
   const resolvedCount = userReports.filter(r => r.status === 'Resolvido').length;
 
+  const ranking = Object.values(reports.reduce((acc, r) => {
+    if (!acc[r.userName]) acc[r.userName] = { name: r.userName, count: 0 };
+    acc[r.userName].count++;
+    return acc;
+  }, {} as Record<string, any>)).sort((a, b) => b.count - a.count);
+
+  const userRankIndex = ranking.findIndex(r => r.name === user.name);
+  const userRank = userRankIndex === -1 ? reports.length > 0 ? ranking.length + 1 : '--' : userRankIndex + 1;
+
   const dynamicAchievements = ACHIEVEMENTS.map(ach => {
     if (ach.id === '1' && userReportsCount >= 1) return { ...ach, done: true };
     if (ach.id === '2' && userReportsCount >= 10) return { ...ach, done: true };
     if (ach.id === '3' && resolvedCount >= 5) return { ...ach, done: true };
+    if (ach.id === '6' && userRankIndex === 0) return { ...ach, done: true };
     return ach;
   });
 
@@ -101,7 +111,7 @@ export const ProfileScreen = () => {
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
             <View style={styles.statBox}>
-              <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>#--</Text>
+              <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>#{userRank}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.textMuted }]}>Ranking</Text>
             </View>
           </View>
