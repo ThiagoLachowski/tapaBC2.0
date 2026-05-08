@@ -22,6 +22,7 @@ import { BeamButton } from '../components/BeamButton';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportsContext';
 import { LeafletMap } from '../components/LeafletMap';
+import { ModernAlert } from '../components/ModernAlert';
 import { useTheme } from '../context/ThemeContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -167,6 +168,7 @@ export const ReportScreen = () => {
   const [location, setLocation]   = useState<{ lat: number, lng: number } | null>(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -174,7 +176,7 @@ export const ReportScreen = () => {
     setModalVisible(false);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão negada', 'Precisamos de acesso à sua câmera para continuar.');
+      setAlertConfig({ visible: true, title: 'Permissão Negada', message: 'Precisamos de acesso à sua câmera para capturar a foto do buraco.' });
       return;
     }
 
@@ -192,7 +194,7 @@ export const ReportScreen = () => {
     setLoadingLoc(true);
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Erro', 'Permissão de localização negada.');
+      setAlertConfig({ visible: true, title: 'Erro de Permissão', message: 'A permissão de localização foi negada. Verifique as configurações do seu celular.' });
       setLoadingLoc(false);
       return;
     }
@@ -297,8 +299,8 @@ export const ReportScreen = () => {
                   </Pressable>
                 ))}
               </View>
-              <LabelInput label="Descrição" placeholder="Descreva o problema (riscos...)" value={description} onChangeText={setDesc} multiline theme={theme} />
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Fotos do buraco ({images.length}/3)</Text>
+              <LabelInput label="Descrição *" placeholder="Descreva o problema (riscos...)" value={description} onChangeText={setDesc} multiline theme={theme} />
+              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Fotos do buraco * ({images.length}/3)</Text>
               <View style={styles.photoRow}>
                 {images.map((uri, i) => (
                   <View key={i} style={styles.photoPreviewWrapper}>
@@ -316,12 +318,31 @@ export const ReportScreen = () => {
               </View>
               <View style={styles.btnRow}>
                 <BeamButton title="Voltar" iconLeft="arrow-left" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => goToStep(0)} />
-                <BeamButton title="Enviar" isPrimary iconRight="check" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={handleSubmit} />
+                <BeamButton 
+                  title="Enviar" 
+                  isPrimary 
+                  iconRight="check" 
+                  style={{ flex: 1, marginTop: theme.spacing.sm, opacity: (images.length > 0 && description.trim().length > 0 && severity) ? 1 : 0.5 } as any} 
+                  onPress={() => {
+                    if (images.length > 0 && description.trim().length > 0 && severity) {
+                      handleSubmit();
+                    } else {
+                      setAlertConfig({ visible: true, title: 'Campos Obrigatórios', message: 'Por favor, adicione pelo menos uma foto e uma descrição para continuar.' });
+                    }
+                  }} 
+                />
               </View>
             </View>
           )}
         </Animated.View>
         <PhotoModal visible={modalVisible} onClose={() => setModalVisible(false)} onTakePhoto={takePhoto} theme={theme} />
+        <ModernAlert 
+          visible={alertConfig.visible} 
+          title={alertConfig.title} 
+          message={alertConfig.message} 
+          onClose={() => setAlertConfig({ ...alertConfig, visible: false })} 
+          theme={theme} 
+        />
       </ScrollView>
     </SafeAreaView>
   );

@@ -37,7 +37,7 @@ export function LeafletMap({
     const tileUrl = isDark 
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    const bgColor = isDark ? '#0a0a0a' : '#f0f0f0';
+    const bgColor = isDark ? '#333333' : '#f0f0f0';
 
     return `
       <!DOCTYPE html>
@@ -48,7 +48,12 @@ export function LeafletMap({
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
           body { margin: 0; padding: 0; background: ${bgColor}; }
-          #map { height: 100vh; width: 100vw; }
+          #map { height: 100vh; width: 100vw; background: ${bgColor}; }
+          .leaflet-tile-pane {
+            filter: ${isDark 
+              ? 'grayscale(1) brightness(2.2) contrast(0.6) invert(10%)' 
+              : 'none'};
+          }
           .leaflet-container { background: ${bgColor} !important; }
           .custom-pin {
             width: 14px;
@@ -216,4 +221,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   }
 });
-

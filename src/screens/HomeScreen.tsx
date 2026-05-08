@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import {
-  View, Text, StyleSheet, ScrollView, Animated as RNAnimated, Easing as RNEasing, Dimensions, Image, TouchableOpacity, Pressable, Modal,
+  View, Text, StyleSheet, ScrollView, Animated as RNAnimated, Easing as RNEasing, Dimensions, Image, TouchableOpacity, Pressable, Modal, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,13 @@ import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
 import { LeafletMap } from '../components/LeafletMap';
 import { theme as staticTheme, darkTheme, lightTheme } from '../theme/tokens';
+
+const SEVERITIES = [
+  { label: 'Baixa',   color: '#22C55E' },
+  { label: 'Média',   color: '#F97316' },
+  { label: 'Alta',    color: '#EF4444' },
+  { label: 'Crítica', color: '#A855F7' },
+];
 
 const { width } = Dimensions.get('window');
 
@@ -86,6 +93,8 @@ export const HomeScreen = () => {
   const [ticker, setTicker] = useState(0);
   const [isMapFullVisible, setIsMapFullVisible] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSeverity, setActiveSeverity] = useState<string | null>(null);
 
   useEffect(() => {
     RNAnimated.timing(headerAnim, { toValue: 1, duration: 600, easing: RNEasing.out(RNEasing.quad), useNativeDriver: true }).start();
@@ -104,6 +113,12 @@ export const HomeScreen = () => {
 
   const markers = reports
     .filter(r => r.latitude && r.longitude)
+    .filter(r => activeSeverity ? r.severity === activeSeverity : true)
+    .filter(r => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return r.street.toLowerCase().includes(q) || r.neighborhood.toLowerCase().includes(q);
+    })
     .map(r => ({ 
       id: r.id, 
       lat: r.latitude!, 
@@ -188,9 +203,21 @@ export const HomeScreen = () => {
           
           <Pressable 
             onPress={() => setIsMapFullVisible(true)}
-            style={[styles.mapContainer, { borderColor: theme.colors.border, backgroundColor: isDark ? '#0a0a0a' : '#f0f0f0' }]}
+            style={[styles.mapContainer, { 
+              borderColor: theme.colors.border, 
+              backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
+              shadowColor: isDark ? '#000' : theme.colors.primary,
+              shadowOpacity: isDark ? 0.5 : 0.1,
+              shadowRadius: 15,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 8
+            }]}
           >
             <LeafletMap markers={markers} interactive={false} />
+            <LinearGradient
+              colors={['transparent', isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)']}
+              style={styles.mapGradient}
+            />
             <View style={styles.mapOverlay}>
               <View style={[styles.expandBtn, { backgroundColor: theme.colors.primary }]}>
                 <Feather name="maximize-2" size={18} color="#FFF" />
@@ -205,11 +232,14 @@ export const HomeScreen = () => {
             onRequestClose={() => setIsMapFullVisible(false)}
           >
             <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-              <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
-                <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Mapa de Caxias-MA</Text>
+              <View style={[styles.modalHeader, { borderBottomColor: 'transparent' }]}>
+                <View>
+                  <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Mapa de Caxias-MA</Text>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 11, fontFamily: 'Inter-Regular' }}>Navegue pelos reportes ativos</Text>
+                </View>
                 <TouchableOpacity 
                   onPress={() => { setIsMapFullVisible(false); }}
-                  style={[styles.closeBtn, { backgroundColor: theme.colors.surface2 }]}
+                  style={[styles.closeBtn, { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border, borderWidth: 1 }]}
                 >
                   <Feather name="x" size={20} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
@@ -219,11 +249,70 @@ export const HomeScreen = () => {
                   markers={markers} 
                   interactive={true} 
                 />
+                
+                {/* Overlay Search UI */}
+                <View style={styles.mapSearchContainer}>
+                  <View style={[styles.mapSearchBox, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+                    <Feather name="search" size={18} color={theme.colors.textMuted} />
+                    <TextInput 
+                      style={[styles.mapSearchInput, { color: theme.colors.textPrimary }]}
+                      placeholder="Buscar ruas ou bairros..."
+                      placeholderTextColor={theme.colors.textMuted}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                  </View>
+                </View>
+
+                {/* Severity Filters */}
+                <View style={styles.mapFiltersContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mapFiltersScroll}>
+                    <TouchableOpacity 
+                      onPress={() => setActiveSeverity(null)}
+                      style={[
+                        styles.filterChip, 
+                        { backgroundColor: !activeSeverity ? theme.colors.primary : theme.colors.surface1, borderColor: theme.colors.border }
+                      ]}
+                    >
+                      <Text style={[styles.filterLabel, { color: !activeSeverity ? '#FFF' : theme.colors.textPrimary }]}>Todos</Text>
+                    </TouchableOpacity>
+                    {SEVERITIES.map((s, i) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        onPress={() => setActiveSeverity(s.label)}
+                        style={[
+                          styles.filterChip, 
+                          { 
+                            backgroundColor: activeSeverity === s.label ? s.color : theme.colors.surface1, 
+                            borderColor: theme.colors.border 
+                          }
+                        ]}
+                      >
+                        <View style={[styles.filterDot, { backgroundColor: activeSeverity === s.label ? '#FFF' : s.color }]} />
+                        <Text style={[styles.filterLabel, { color: activeSeverity === s.label ? '#FFF' : theme.colors.textPrimary }]}>{s.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Floating Map Controls */}
+                <View style={styles.mapControls}>
+                  <TouchableOpacity style={[styles.mapControlBtn, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+                    <Feather name="navigation" size={20} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.mapControlBtn, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
+                    <Feather name="layers" size={20} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
               </View>
+
               <View style={[styles.modalFooter, { backgroundColor: theme.colors.surface1, borderTopColor: theme.colors.border }]}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                  Mostrando {markers.length} reportes ativos na cidade
-                </Text>
+                <View style={styles.footerInfo}>
+                  <Feather name="info" size={14} color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginLeft: 6 }}>
+                    Toque nos marcadores para ver detalhes de cada buraco
+                  </Text>
+                </View>
               </View>
             </SafeAreaView>
           </Modal>
@@ -260,7 +349,18 @@ const styles = StyleSheet.create({
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center' },
   sectionTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  mapContainer: { marginHorizontal: 24, height: 250, borderRadius: 16, overflow: 'hidden', marginBottom: 24, borderWidth: 1, position: 'relative' },
+  mapContainer: { 
+    marginHorizontal: 24, 
+    height: 220, 
+    borderRadius: 28, 
+    overflow: 'hidden', 
+    marginBottom: 24, 
+    borderWidth: 1, 
+    position: 'relative' 
+  },
+  mapGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
   reportsList: { paddingHorizontal: 24, gap: 8 },
   reportRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 16, borderWidth: 1, gap: 12 },
   dot: { width: 8, height: 8, borderRadius: 4 },
@@ -273,12 +373,12 @@ const styles = StyleSheet.create({
   empty: { marginHorizontal: 24, alignItems: 'center', padding: 32, borderRadius: 16, borderWidth: 1, gap: 8 },
   emptyTitle: { fontFamily: 'Inter-SemiBold', fontSize: 16 },
   emptySub: { fontFamily: 'Inter-Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  mapOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.05)', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 12 },
+  mapOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', alignItems: 'flex-end', padding: 16 },
   expandBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-  modalHeader: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold' },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  modalFooter: { padding: 16, borderTopWidth: 1 },
+  modalHeader: { height: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, borderBottomWidth: 1 },
+  modalTitle: { fontSize: 20, fontFamily: 'Inter-SemiBold' },
+  closeBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  modalFooter: { padding: 16, borderTopWidth: 1, paddingBottom: 24 },
   rankingSection: { marginBottom: 24 },
   rankingScroll: { paddingHorizontal: 24, gap: 12 },
   rankingCard: { width: 120, borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, position: 'relative' },
@@ -287,6 +387,20 @@ const styles = StyleSheet.create({
   rankingName: { fontSize: 13, fontFamily: 'Inter-SemiBold', marginTop: 8, marginBottom: 4, textAlign: 'center' },
   reportCountBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   reportCountText: { fontSize: 10, fontFamily: 'Inter-Medium', textAlign: 'center' },
+  
+  // Modal Map UI
+  mapSearchContainer: { position: 'absolute', top: 16, left: 20, right: 20, zIndex: 10 },
+  mapSearchBox: { flexDirection: 'row', alignItems: 'center', height: 48, borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 },
+  mapSearchPlaceholder: { marginLeft: 12, fontSize: 14, fontFamily: 'Inter-Regular' },
+  mapSearchInput: { flex: 1, marginLeft: 12, fontSize: 14, fontFamily: 'Inter-Regular', height: '100%' },
+  mapFiltersContainer: { position: 'absolute', bottom: 20, left: 0, right: 0, zIndex: 10 },
+  mapFiltersScroll: { paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', height: 40, borderRadius: 20, paddingHorizontal: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4 },
+  filterDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  filterLabel: { fontSize: 12, fontFamily: 'Inter-Medium' },
+  mapControls: { position: 'absolute', top: 80, right: 20, gap: 10, zIndex: 10 },
+  mapControlBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  footerInfo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
 });
 
 

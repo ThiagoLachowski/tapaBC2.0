@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { BeamButton } from '../../components/BeamButton';
+import { ModernAlert } from '../../components/ModernAlert';
 import { theme as staticTheme } from '../../theme/tokens';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { useTheme } from '../../context/ThemeContext';
@@ -75,6 +76,7 @@ export function RegisterScreen({ navigation }: Props) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [step, setStep]         = useState(0);
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -89,7 +91,7 @@ export function RegisterScreen({ navigation }: Props) {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão negada', 'Precisamos de acesso às suas fotos.');
+      setAlertConfig({ visible: true, title: 'Permissão Negada', message: 'Precisamos de acesso às suas fotos para você escolher um avatar.' });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -180,6 +182,12 @@ export function RegisterScreen({ navigation }: Props) {
 
           </Animated.View>
         </ScrollView>
+        <ModernAlert 
+          visible={alertConfig.visible} 
+          title={alertConfig.title} 
+          message={alertConfig.message} 
+          onClose={() => setAlertConfig({ ...alertConfig, visible: false })} 
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
