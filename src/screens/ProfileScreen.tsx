@@ -18,12 +18,12 @@ import { getRelativeTime } from '../utils/date';
 import { useTheme } from '../context/ThemeContext';
 
 const ACHIEVEMENTS = [
-  { id: '1', icon: 'award', label: 'Primeiro Reporte',   done: false },
-  { id: '2', icon: 'hash',  label: '10 Reportes',        done: false },
-  { id: '3', icon: 'star',  label: '5 Resolvidos',       done: false },
-  { id: '4', icon: 'map',   label: 'Mapeou o Bairro',    done: false },
-  { id: '5', icon: 'rocket', label: '50 Reportes',        done: false },
-  { id: '6', icon: 'crown',  label: 'Top Contribuidor',   done: false },
+  { id: '1', icon: 'target', label: 'Primeiro Reporte',   done: false },
+  { id: '2', icon: 'hash',   label: '10 Reportes',        done: false },
+  { id: '3', icon: 'star',   label: '5 Resolvidos',       done: false },
+  { id: '4', icon: 'map',    label: 'Mapeou o Bairro',    done: false },
+  { id: '5', icon: 'zap',    label: '50 Reportes',        done: false },
+  { id: '6', icon: 'award',  label: 'Top Contribuidor',   done: false },
 ];
 
 function AnimRow({ children, delay }: { children: React.ReactNode; delay: number }) {
