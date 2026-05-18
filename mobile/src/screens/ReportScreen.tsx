@@ -156,7 +156,7 @@ function SuccessScreen({ onReset, theme }: { onReset: () => void; theme: any }) 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export const ReportScreen = () => {
   const { user } = useAuth();
-  const { reports, addReport } = useReports();
+  const { addReport } = useReports();
   const { theme, isDark } = useTheme();
 
   const [step, setStep]           = useState(0); 
@@ -168,6 +168,7 @@ export const ReportScreen = () => {
   const [location, setLocation]   = useState<{ lat: number, lng: number } | null>(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -185,7 +186,7 @@ export const ReportScreen = () => {
       quality: 0.7,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets[0].uri) {
       setImages([...images, result.assets[0].uri]);
     }
   };
@@ -212,27 +213,52 @@ export const ReportScreen = () => {
     setStep(s);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!user || !severity) return;
-    const sevObj = SEVERITIES.find(s => s.label === severity)!;
-    addReport({
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatar,
-      isCustomAvatar: user.isCustomAvatar,
-      street,
-      neighborhood,
-      description,
-      severity,
-      severityColor: sevObj.color,
-      images,
-      latitude: location?.lat,
-      longitude: location?.lng,
-    });
-    goToStep(2);
+    if (images.length === 0) {
+      setAlertConfig({ visible: true, title: 'Fotos obrigatórias', message: 'Adicione pelo menos uma foto do buraco.' });
+      return;
+    }
+    if (!description.trim()) {
+      setAlertConfig({ visible: true, title: 'Descrição obrigatória', message: 'Descreva o problema para ajudar na identificação.' });
+      return;
+    }
+
+    setSubmitting(true);
+    
+    try {
+      // Chamar addReport com os dados corretos
+      await addReport({
+        street,
+        neighborhood,
+        description,
+        severity,
+        latitude: location?.lat,
+        longitude: location?.lng,
+      }, images);
+      
+      goToStep(2);
+    } catch (error) {
+      console.error('Erro ao enviar report:', error);
+      setAlertConfig({ 
+        visible: true, 
+        title: 'Erro ao enviar', 
+        message: 'Não foi possível enviar seu report. Tente novamente.' 
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (step === 2) return <SuccessScreen onReset={() => { setStreet(''); setNhood(''); setDesc(''); setSeverity(null); setImages([]); setLocation(null); setStep(0); }} theme={theme} />;
+  if (step === 2) return <SuccessScreen onReset={() => { 
+    setStreet(''); 
+    setNhood(''); 
+    setDesc(''); 
+    setSeverity(null); 
+    setImages([]); 
+    setLocation(null); 
+    setStep(0); 
+  }} theme={theme} />;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -280,7 +306,7 @@ export const ReportScreen = () => {
               <LabelInput label="Rua / Avenida" placeholder="Ex: Av. Getúlio Vargas" value={street} onChangeText={setStreet} theme={theme} />
               <LabelInput label="Bairro" placeholder="Ex: Centro" value={neighborhood} onChangeText={setNhood} theme={theme} />
               
-              <BeamButton title="Próximo" isPrimary iconRight="arrow-right" style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); }} />
+              <BeamButton title="Próximo" isPrimary iconRight="arrow-right" style={styles.ctaBtn} onPress={() => { if (street && neighborhood) goToStep(1); else setAlertConfig({ visible: true, title: 'Campos obrigatórios', message: 'Preencha a rua e o bairro para continuar.' }); }} />
             </View>
           )}
 
@@ -319,7 +345,7 @@ export const ReportScreen = () => {
               <View style={styles.btnRow}>
                 <BeamButton title="Voltar" iconLeft="arrow-left" style={{ flex: 1, marginTop: theme.spacing.sm } as any} onPress={() => goToStep(0)} />
                 <BeamButton 
-                  title="Enviar" 
+                  title={submitting ? "Enviando..." : "Enviar"} 
                   isPrimary 
                   iconRight="check" 
                   style={{ flex: 1, marginTop: theme.spacing.sm, opacity: (images.length > 0 && description.trim().length > 0 && severity) ? 1 : 0.5 } as any} 
@@ -327,7 +353,7 @@ export const ReportScreen = () => {
                     if (images.length > 0 && description.trim().length > 0 && severity) {
                       handleSubmit();
                     } else {
-                      setAlertConfig({ visible: true, title: 'Campos Obrigatórios', message: 'Por favor, adicione pelo menos uma foto e uma descrição para continuar.' });
+                      setAlertConfig({ visible: true, title: 'Campos Obrigatórios', message: 'Por favor, adicione pelo menos uma foto, uma descrição e selecione a gravidade para continuar.' });
                     }
                   }} 
                 />
@@ -341,7 +367,6 @@ export const ReportScreen = () => {
           title={alertConfig.title} 
           message={alertConfig.message} 
           onClose={() => setAlertConfig({ ...alertConfig, visible: false })} 
-          theme={theme} 
         />
       </ScrollView>
     </SafeAreaView>
@@ -357,11 +382,8 @@ const styles = StyleSheet.create({
   headerSub:  { fontSize: 13, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular, marginTop: 4 },
   stepRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: staticTheme.spacing.xs },
   stepDot:    { width: 28, height: 28, borderRadius: 14, backgroundColor: staticTheme.colors.surface2, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: staticTheme.colors.border },
-  stepDotActive: { borderColor: staticTheme.colors.primary, backgroundColor: 'rgba(249,115,22,0.15)' },
-  stepDotDone: { borderColor: staticTheme.colors.primary, backgroundColor: staticTheme.colors.primary },
   stepDotText: { color: staticTheme.colors.textPrimary, fontSize: 11, fontFamily: staticTheme.typography.fontFamily.semiBold },
   stepLine:    { flex: 1, height: 1.5, backgroundColor: staticTheme.colors.border },
-  stepLineDone:{ backgroundColor: staticTheme.colors.primary },
   stepLabels:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: staticTheme.spacing.xl },
   stepLabel:   { fontSize: 10, color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.regular, textAlign: 'center', width: 60 },
   card:        { backgroundColor: staticTheme.colors.surface1, borderRadius: staticTheme.radii.xl, padding: staticTheme.spacing.lg, borderWidth: 1, borderColor: staticTheme.colors.border, gap: staticTheme.spacing.md },
@@ -371,10 +393,8 @@ const styles = StyleSheet.create({
   inputLabel:    { fontSize: 12, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
   input:         { backgroundColor: staticTheme.colors.surface2, borderRadius: staticTheme.radii.md, borderWidth: 1, borderColor: staticTheme.colors.border, color: staticTheme.colors.textPrimary, paddingHorizontal: staticTheme.spacing.md, paddingVertical: 12, fontSize: 14, fontFamily: staticTheme.typography.fontFamily.regular },
   inputMulti:    { height: 100 },
-  
   mapSelectionContainer: { height: 200, borderRadius: staticTheme.radii.lg, overflow: 'hidden', borderWidth: 1, borderColor: staticTheme.colors.border, marginBottom: staticTheme.spacing.sm, position: 'relative' },
   gpsBtn: { position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: staticTheme.colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
-
   severityGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: staticTheme.spacing.sm },
   severityOption:{ flex: 1, minWidth: '40%', alignItems: 'center', padding: staticTheme.spacing.sm, borderRadius: staticTheme.radii.md, borderWidth: 1.5, gap: 4 },
   severityOptionText: { color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 12 },
@@ -383,15 +403,12 @@ const styles = StyleSheet.create({
   photoPreview: { width: 80, height: 80, borderRadius: staticTheme.radii.md },
   photoRemove: { position: 'absolute', top: -5, right: -5, width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: staticTheme.colors.surface1 },
   photoSlot: { width: 80, height: 80, borderRadius: staticTheme.radii.md, borderWidth: 1.5, borderColor: staticTheme.colors.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: staticTheme.colors.surface2 },
-  photoPlus: { fontSize: 24, color: staticTheme.colors.textMuted },
   ctaBtn: { marginTop: staticTheme.spacing.sm },
   btnRow: { flexDirection: 'row', gap: staticTheme.spacing.sm, marginTop: staticTheme.spacing.sm },
   successContainer: { flex: 1, backgroundColor: staticTheme.colors.background, justifyContent: 'center', alignItems: 'center', padding: staticTheme.spacing.xl },
   successIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1.5, borderColor: 'rgba(249,115,22,0.35)', justifyContent: 'center', alignItems: 'center', marginBottom: staticTheme.spacing.lg },
   successTitle:{ fontSize: 26, color: staticTheme.colors.textPrimary, fontFamily: staticTheme.typography.fontFamily.semiBold, marginBottom: staticTheme.spacing.md },
   successSub:  { fontSize: 14, color: staticTheme.colors.textSecondary, fontFamily: staticTheme.typography.fontFamily.regular, textAlign: 'center', lineHeight: 22 },
-
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: staticTheme.colors.surface1, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: staticTheme.spacing.xl, paddingBottom: 40, borderTopWidth: 1, borderColor: staticTheme.colors.border },
   modalHeader: { alignItems: 'center', marginBottom: staticTheme.spacing.lg },
@@ -406,4 +423,3 @@ const styles = StyleSheet.create({
   modalCancel: { alignItems: 'center', padding: staticTheme.spacing.md },
   modalCancelText: { color: staticTheme.colors.textMuted, fontFamily: staticTheme.typography.fontFamily.medium, fontSize: 14 },
 });
-

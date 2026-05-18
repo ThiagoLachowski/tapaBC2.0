@@ -107,10 +107,28 @@ export function RegisterScreen({ navigation }: Props) {
   };
 
   const handleRegister = async () => {
+    // Validação de senha
+    if (password !== confirm) {
+      setError('As senhas não coincidem');
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+
     setLoading(true);
     const err = await register(name, email, password, avatar, isCustom);
     setLoading(false);
-    if (err) { setError(err); setStep(0); }
+    
+    if (err) { 
+      setError(err); 
+      setStep(0); // Voltar para o primeiro passo se erro
+    } else {
+      // Sucesso - navegar para Home
+      // navigation.replace('Home'); // Use replace ao invés de navigate para não voltar para registro
+    }
   };
 
   const initials = name.trim().split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'CX';

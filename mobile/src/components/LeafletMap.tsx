@@ -124,35 +124,39 @@ export function LeafletMap({
           }).addTo(map);
 
           const markers = ${JSON.stringify(markers)};
-          markers.forEach(m => {
-            const icon = L.divIcon({
-              className: 'custom-div-icon',
-              html: \`<div class="custom-pin" style="background-color: \${m.color}"></div>\`,
-              iconSize: [14, 14],
-              iconAnchor: [7, 7]
-            });
-            const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
-            
-            if (m.title) {
-              const popupHtml = \`
-                <div class="popup-container">
-                  \${m.image ? \`<img src="\${m.image}" class="popup-image" onerror="this.src='https://via.placeholder.com/220x120?text=Imagem+indisponivel'; this.style.opacity='0.6';" />\` : ''}
-                  <div class="popup-text">
-                    <div class="popup-title">\${m.title}</div>
-                    <div class="popup-sub">\${m.description}</div>
-                  </div>
-                </div>
-              \`;
-              marker.bindPopup(popupHtml, {
-                maxWidth: 220,
-                className: 'custom-popup'
+          
+          // ✅ APENAS ESTA LINHA FOI ADICIONADA (verificação)
+          if (markers && markers.length > 0) {
+            markers.forEach(m => {
+              const icon = L.divIcon({
+                className: 'custom-div-icon',
+                html: \`<div class="custom-pin" style="background-color: \${m.color}"></div>\`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
               });
-            }
+              const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
+              
+              if (m.title) {
+                const popupHtml = \`
+                  <div class="popup-container">
+                    \${m.image ? \`<img src="\${m.image}" class="popup-image" onerror="this.src='https://via.placeholder.com/220x120?text=Imagem+indisponivel'; this.style.opacity='0.6';" />\` : ''}
+                    <div class="popup-text">
+                      <div class="popup-title">\${m.title}</div>
+                      <div class="popup-sub">\${m.description}</div>
+                    </div>
+                  </div>
+                \`;
+                marker.bindPopup(popupHtml, {
+                  maxWidth: 220,
+                  className: 'custom-popup'
+                });
+              }
 
-            marker.on('click', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'onMarkerPress', id: m.id }));
+              marker.on('click', function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'onMarkerPress', id: m.id }));
+              });
             });
-          });
+          }
 
           ${interactive ? `
             map.on('click', function(e) {

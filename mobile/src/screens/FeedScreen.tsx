@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
 import { useReports } from '../context/ReportsContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
@@ -19,7 +20,9 @@ import { useTheme } from '../context/ThemeContext';
 import { theme as staticTheme } from '../theme/tokens';
 
 const { width } = Dimensions.get('window');
-const FILTERS = ['Todos', 'Novos', 'Em análise', 'Resolvidos'];
+
+// Filtros baseados nos parâmetros que vêm da Home
+type FilterType = 'Todos' | 'Novos' | 'Em análise' | 'Resolvidos';
 
 // ── Vote button ───────────────────────────────────────────────────────────────
 function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; theme: any }) {
@@ -32,7 +35,7 @@ function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; 
       onVote();
       Animated.sequence([
         Animated.timing(scale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1,   duration: 100, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 100, useNativeDriver: true }),
       ]).start();
     }
   };
@@ -55,12 +58,17 @@ function VoteBtn({ count, onVote, theme }: { count: number; onVote: () => void; 
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState({ theme }: { theme: any }) {
+function EmptyState({ theme, filter }: { theme: any; filter: string }) {
+  let message = '';
+  if (filter === 'Em análise') message = 'Não há reportes em análise no momento.';
+  else if (filter === 'Resolvidos') message = 'Nenhum reporte foi resolvido ainda.';
+  else message = 'Ninguém postou nada ainda em Caxias. Seja o primeiro a relatar um problema!';
+
   return (
     <View style={[styles.empty, { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border }]}>
       <Feather name="message-square" size={40} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
       <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>A comunidade está quieta</Text>
-      <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>Ninguém postou nada ainda em Caxias. Seja o primeiro a relatar um problema!</Text>
+      <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>{message}</Text>
     </View>
   );
 }
@@ -113,7 +121,7 @@ function FeedCard({ item, delay, onVote, ticker, theme }: { item: any; delay: nu
         <VoteBtn count={item.votes} onVote={onVote} theme={theme} />
         <Pressable style={styles.commentBtn}>
           <Feather name="message-square" size={16} color={theme.colors.textMuted} />
-          <Text style={[styles.commentCount, { color: theme.colors.textMuted }]}>{item.comments}</Text>
+          <Text style={[styles.commentCount, { color: theme.colors.textMuted }]}>{item.comments || 0}</Text>
         </Pressable>
         <Pressable style={styles.shareBtn}>
           <Text style={[styles.shareText, { color: theme.colors.primary }]}>Compartilhar</Text>
@@ -125,11 +133,35 @@ function FeedCard({ item, delay, onVote, ticker, theme }: { item: any; delay: nu
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export const FeedScreen = () => {
+  const route = useRoute();
   const { reports, voteReport } = useReports();
   const { theme } = useTheme();
-  const [activeFilter, setFilter] = useState('Todos');
+  const [activeFilter, setFilter] = useState<FilterType>('Todos');
   const headerAnim = useRef(new Animated.Value(0)).current;
   const [ticker, setTicker] = useState(0);
+
+  // ✅ Pegar o filtro dos parâmetros da rota (quando vem da HomeScreen)
+  useEffect(() => {
+    const params = route.params as { filter?: string };
+    console.log('FeedScreen recebeu params:', params);
+    
+    if (params?.filter) {
+      // Mapear o filtro da Home para o formato do Feed
+      switch (params.filter) {
+        case 'all':
+          setFilter('Todos');
+          break;
+        case 'analyzing':
+          setFilter('Em análise');
+          break;
+        case 'resolved':
+          setFilter('Resolvidos');
+          break;
+        default:
+          setFilter('Todos');
+      }
+    }
+  }, [route.params]);
 
   useEffect(() => {
     Animated.timing(headerAnim, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
@@ -137,21 +169,30 @@ export const FeedScreen = () => {
     return () => clearInterval(interval);
   }, [headerAnim]);
 
-  const filtered = activeFilter === 'Todos'
-    ? reports
-    : reports.filter(r => r.status.toLowerCase() === activeFilter.toLowerCase().replace('s', ''));
+  // ✅ Filtrar reports baseado no filtro ativo
+  const getFilteredReports = () => {
+    if (activeFilter === 'Todos') return reports;
+    if (activeFilter === 'Novos') return reports.filter(r => r.status === 'Novo');
+    if (activeFilter === 'Em análise') return reports.filter(r => r.status === 'Em análise');
+    if (activeFilter === 'Resolvidos') return reports.filter(r => r.status === 'Resolvido');
+    return reports;
+  };
+
+  const filteredReports = getFilteredReports();
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <Animated.View style={[styles.stickyHeader, { opacity: headerAnim }]}>
         <Text style={[styles.screenTitle, { color: theme.colors.textPrimary }]}>Comunidade</Text>
-        <Text style={[styles.screenSub, { color: theme.colors.textSecondary }]}>{reports.length} reportes em Caxias</Text>
+        <Text style={[styles.screenSub, { color: theme.colors.textSecondary }]}>
+          {filteredReports.length} reporte{filteredReports.length !== 1 ? 's' : ''} em {activeFilter.toLowerCase()}
+        </Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-          {FILTERS.map(f => (
+          {['Todos', 'Novos', 'Em análise', 'Resolvidos'].map(f => (
             <Pressable 
               key={f} 
-              onPress={() => setFilter(f)} 
+              onPress={() => setFilter(f as FilterType)} 
               style={[
                 styles.filterChip, 
                 { backgroundColor: theme.colors.surface1, borderColor: theme.colors.border },
@@ -166,9 +207,11 @@ export const FeedScreen = () => {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.feedContent} showsVerticalScrollIndicator={false}>
         {reports.length === 0 ? (
-          <EmptyState theme={theme} />
+          <EmptyState theme={theme} filter={activeFilter} />
+        ) : filteredReports.length === 0 ? (
+          <EmptyState theme={theme} filter={activeFilter} />
         ) : (
-          filtered.map((item, i) => (
+          filteredReports.map((item, i) => (
             <FeedCard key={item.id} item={item} delay={100 + i * 80} onVote={() => voteReport(item.id)} ticker={ticker} theme={theme} />
           ))
         )}
@@ -211,4 +254,3 @@ const styles = StyleSheet.create({
   emptyTitle:  { fontFamily: 'Inter-SemiBold', fontSize: 16 },
   emptySub:    { fontFamily: 'Inter-Regular', fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });
-

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { StatusBar } from 'expo-status-bar';
@@ -21,10 +21,25 @@ function SplashFade({ children }: { children: React.ReactNode }) {
   return <Animated.View style={[{ flex: 1 }, { opacity }]}>{children}</Animated.View>;
 }
 
+// ── Loading Screen (enquanto verifica autenticação) ──────────────────────────
+function LoadingScreen() {
+  const { isDark } = useTheme();
+  return (
+    <View style={[styles.loadingContainer, { backgroundColor: isDark ? theme.colors.background : '#fff' }]}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+    </View>
+  );
+}
+
 // ── Root Content (decides which navigator to show) ──────────────────────────
 function RootContent() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();  // ← ADICIONADO loading
   const { isDark } = useTheme();
+
+  // Mostrar loading enquanto verifica sessão
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <SplashFade>
@@ -60,4 +75,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   loading: { flex: 1, backgroundColor: theme.colors.background },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
 });
