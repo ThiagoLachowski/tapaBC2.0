@@ -1,0 +1,7 @@
+node_modules
+.expo
+.env
+.git
+*.log
+.expo-shared
+.expo-internal
