@@ -1,33 +1,49 @@
 {
   "expo": {
-    "name": "TAPAburacoCX",
-    "slug": "TAPAburacoCX",
+    "name": "Caxias Buracos",
+    "slug": "caxias-buracos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
+      "backgroundColor": "#050505"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#050505"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.caxiasburacos.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.caxiasburacos.app"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-image-picker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Este app precisa da sua localização para marcar buracos no mapa."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ca771615-5a27-431b-bf0b-d5cf0f3b10b7"
+      }
+    }
   }
 }
