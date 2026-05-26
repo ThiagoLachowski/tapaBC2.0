@@ -17,13 +17,50 @@ import { UserAvatar } from '../components/UserAvatar';
 import { getRelativeTime } from '../utils/date';
 import { useTheme } from '../context/ThemeContext';
 
+// Função auxiliar para cor da severidade
+const getSeverityColor = (severity: string): string => {
+  switch (severity) {
+    case 'Baixa': return '#22C55E';
+    case 'Média': return '#F97316';
+    case 'Alta': return '#EF4444';
+    case 'Crítica': return '#A855F7';
+    default: return '#F97316';
+  }
+};
+
+// Função auxiliar para status
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'Resolvido': return '#22C55E';
+    case 'Aprovado': return '#6366F1';
+    case 'Em análise': return '#F97316';
+    case 'Rejeitado': return '#EF4444';
+    default: return '#64748B';
+  }
+};
+
+// Níveis baseados na quantidade de reports
+const getLevelInfo = (reportCount: number) => {
+  if (reportCount >= 50) {
+    return { name: 'Herói da Cidade', nextLevel: 50, currentProgress: reportCount, progressPercent: 100 };
+  } else if (reportCount >= 25) {
+    return { name: 'Fiscal Urbano', nextLevel: 50, currentProgress: reportCount, progressPercent: (reportCount / 50) * 100 };
+  } else if (reportCount >= 10) {
+    return { name: 'Guardião de Ruas', nextLevel: 25, currentProgress: reportCount, progressPercent: (reportCount / 25) * 100 };
+  } else if (reportCount >= 3) {
+    return { name: 'Observador', nextLevel: 10, currentProgress: reportCount, progressPercent: (reportCount / 10) * 100 };
+  } else {
+    return { name: 'Novato', nextLevel: 3, currentProgress: reportCount, progressPercent: (reportCount / 3) * 100 };
+  }
+};
+
 const ACHIEVEMENTS = [
-  { id: '1', icon: 'target', label: 'Primeiro Reporte',   done: false },
-  { id: '2', icon: 'hash',   label: '10 Reportes',        done: false },
-  { id: '3', icon: 'star',   label: '5 Resolvidos',       done: false },
-  { id: '4', icon: 'map',    label: 'Mapeou o Bairro',    done: false },
-  { id: '5', icon: 'zap',    label: '50 Reportes',        done: false },
-  { id: '6', icon: 'award',  label: 'Top Contribuidor',   done: false },
+  { id: '1', icon: 'target', label: 'Primeiro Reporte', condition: (reports: number) => reports >= 1 },
+  { id: '2', icon: 'hash', label: '10 Reportes', condition: (reports: number) => reports >= 10 },
+  { id: '3', icon: 'star', label: '5 Resolvidos', condition: (reports: number, resolved: number) => resolved >= 5 },
+  { id: '4', icon: 'map', label: 'Mapeou o Bairro', condition: (reports: number) => reports >= 5 },
+  { id: '5', icon: 'zap', label: '50 Reportes', condition: (reports: number) => reports >= 50 },
+  { id: '6', icon: 'award', label: 'Top Contribuidor', condition: (reports: number, resolved: number, rank: number) => rank === 1 },
 ];
 
 function AnimRow({ children, delay }: { children: React.ReactNode; delay: number }) {
@@ -51,33 +88,46 @@ export const ProfileScreen = () => {
 
   if (!user) return null;
 
-  const userReports = reports.filter(r => r.userId === user.id);
+  // ✅ CORRIGIDO: usar user_id (campo correto do Supabase)
+  const userReports = reports.filter(r => r.user_id === user.id);
   const userReportsCount = userReports.length;
   const resolvedCount = userReports.filter(r => r.status === 'Resolvido').length;
 
+  // ✅ CORRIGIDO: Ranking baseado em user_id
   const ranking = Object.values(reports.reduce((acc, r) => {
-    if (!acc[r.userName]) acc[r.userName] = { name: r.userName, count: 0 };
-    acc[r.userName].count++;
+    const userId = r.user_id;
+    const userName = r.userName || 'Anônimo';
+    if (!acc[userId]) {
+      acc[userId] = { userId, name: userName, count: 0 };
+    }
+    acc[userId].count++;
     return acc;
   }, {} as Record<string, any>)).sort((a, b) => b.count - a.count);
 
-  const userRankIndex = ranking.findIndex(r => r.name === user.name);
-  const userRank = userRankIndex === -1 ? reports.length > 0 ? ranking.length + 1 : '--' : userRankIndex + 1;
+  const userRankIndex = ranking.findIndex(r => r.userId === user.id);
+  const userRank = userRankIndex === -1 ? (ranking.length > 0 ? ranking.length + 1 : '--') : userRankIndex + 1;
 
+  // ✅ CORRIGIDO: Conquistas com base nos dados reais
   const dynamicAchievements = ACHIEVEMENTS.map(ach => {
-    if (ach.id === '1' && userReportsCount >= 1) return { ...ach, done: true };
-    if (ach.id === '2' && userReportsCount >= 10) return { ...ach, done: true };
-    if (ach.id === '3' && resolvedCount >= 5) return { ...ach, done: true };
-    if (ach.id === '6' && userRankIndex === 0) return { ...ach, done: true };
-    return ach;
+    let done = false;
+    if (ach.id === '1') done = userReportsCount >= 1;
+    else if (ach.id === '2') done = userReportsCount >= 10;
+    else if (ach.id === '3') done = resolvedCount >= 5;
+    else if (ach.id === '4') done = userReportsCount >= 5;
+    else if (ach.id === '5') done = userReportsCount >= 50;
+    else if (ach.id === '6') done = userRank === 1;
+    return { ...ach, done };
   });
 
+  // ✅ CORRIGIDO: Nível baseado na quantidade de reports
+  const levelInfo = getLevelInfo(userReportsCount);
+
   const MENU_ITEMS = [
-    { icon: 'bell', label: 'Notificações',       sub: 'Novidades dos seus reportes' },
-    { icon: 'shield', label: 'Privacidade',       sub: 'Gerencie seus dados' },
-    { icon: 'message-circle', label: 'Feedback',           sub: 'Nos ajude a melhorar' },
-    { icon: 'help-circle', label: 'Ajuda e Suporte',   sub: 'Dúvidas frequentes' },
-    { icon: 'log-out', label: 'Sair',              sub: 'Encerrar sessão', danger: true, onPress: logout },
+    { icon: 'bell', label: 'Notificações', sub: 'Novidades dos seus reportes' },
+    { icon: 'shield', label: 'Privacidade', sub: 'Gerencie seus dados' },
+    { icon: 'message-circle', label: 'Feedback', sub: 'Nos ajude a melhorar' },
+    { icon: 'help-circle', label: 'Ajuda e Suporte', sub: 'Dúvidas frequentes' },
+    { icon: 'log-out', label: 'Sair', sub: 'Encerrar sessão', danger: true, onPress: logout },
   ];
 
   return (
@@ -90,10 +140,10 @@ export const ProfileScreen = () => {
             <UserAvatar user={user} size={64} />
             <View style={styles.heroInfo}>
               <Text style={[styles.heroName, { color: theme.colors.textPrimary }]}>{user.name}</Text>
-              <Text style={[styles.heroHandle, { color: theme.colors.textMuted }]}>{user.handle}</Text>
+              <Text style={[styles.heroHandle, { color: theme.colors.textMuted }]}>{user.handle || user.email}</Text>
               <View style={[styles.rankBadge, { backgroundColor: theme.colors.primary + '22', borderColor: theme.colors.primary + '55' }]}>
                 <Feather name="star" size={12} color={theme.colors.primary} style={{ marginRight: 4 }} />
-                <Text style={[styles.rankText, { color: theme.colors.primary }]}>Guardião de Ruas</Text>
+                <Text style={[styles.rankText, { color: theme.colors.primary }]}>{levelInfo.name}</Text>
               </View>
             </View>
           </View>
@@ -124,12 +174,12 @@ export const ProfileScreen = () => {
               <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Seus últimos reportes</Text>
               {userReports.slice(0, 3).map((r, i) => (
                 <View key={r.id} style={[styles.historyRow, i < 2 && { borderBottomColor: theme.colors.border, borderBottomWidth: 1 }]}>
-                  <View style={[styles.historyDot, { backgroundColor: r.severityColor }]} />
+                  <View style={[styles.historyDot, { backgroundColor: getSeverityColor(r.severity) }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.historyStreet, { color: theme.colors.textPrimary }]}>{r.street}</Text>
                     <Text style={[styles.historyTime, { color: theme.colors.textMuted }]}>{getRelativeTime(r.createdAt)}</Text>
                   </View>
-                  <Text style={[styles.historyStatus, { color: r.severityColor }]}>{r.status}</Text>
+                  <Text style={[styles.historyStatus, { color: getStatusColor(r.status) }]}>{r.status}</Text>
                 </View>
               ))}
             </View>
@@ -144,12 +194,12 @@ export const ProfileScreen = () => {
                 colors={[theme.colors.primary, isDark ? '#facc15' : '#4ade80']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${Math.min((userReportsCount/10)*100, 100)}%` }]}
+                style={[styles.progressFill, { width: `${levelInfo.progressPercent}%` }]}
               />
             </View>
             <View style={styles.progressLabels}>
-              <Text style={[styles.progressLabel, { color: theme.colors.textMuted }]}>{userReportsCount} / 10 reportes</Text>
-              <Text style={[styles.progressLabel, { color: theme.colors.textMuted }]}>{Math.round(Math.min((userReportsCount/10)*100, 100))}%</Text>
+              <Text style={[styles.progressLabel, { color: theme.colors.textMuted }]}>{levelInfo.currentProgress} / {levelInfo.nextLevel} reportes</Text>
+              <Text style={[styles.progressLabel, { color: theme.colors.textMuted }]}>{Math.round(levelInfo.progressPercent)}%</Text>
             </View>
           </View>
         </AnimRow>
@@ -247,4 +297,3 @@ const styles = StyleSheet.create({
   versionText: { textAlign: 'center', fontSize: 11, fontFamily: 'Inter-Regular' },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
 });
-
