@@ -1,10 +1,10 @@
-# 🕳️ Sistema de Mapeamento de Buracos Urbanos
+# Sistema de Mapeamento de Buracos Urbanos
 
 > **Trabalho Acadêmico** - Aplicativo colaborativo para reporte de problemas de infraestrutura urbana
 
 ---
 
-## 📋 Sobre o Projeto
+## Sobre o Projeto
 
 Um aplicativo mobile que permite cidadãos reportarem buracos e problemas no asfalto de forma colaborativa. O sistema conecta população e poder público, permitindo acompanhamento em tempo real da resolução dos problemas.
 
@@ -17,7 +17,7 @@ Um aplicativo mobile que permite cidadãos reportarem buracos e problemas no asf
 
 ---
 
-## 🏗️ Arquitetura do Sistema
+## Arquitetura do Sistema
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -38,7 +38,7 @@ Um aplicativo mobile que permite cidadãos reportarem buracos e problemas no asf
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 📊 Tecnologias Utilizadas
+### Tecnologias Utilizadas
 
 | Camada | Tecnologia | Finalidade |
 |--------|------------|------------|
@@ -85,7 +85,7 @@ tapaBC2.0/
 
 ---
 
-## 🗃️ Modelo de Dados (PostgreSQL)
+## Modelo de Dados (PostgreSQL)
 
 ### Principais Entidades
 
@@ -97,7 +97,7 @@ tapaBC2.0/
 | `votes` | Votos dos usuários | user_id, report_id (PK composta) |
 | `comments` | Comentários | id, report_id, user_id, content |
 
-### 🔒 Segurança (RLS)
+### Segurança (RLS)
 
 - **SELECT**: Qualquer usuário autenticado pode ler
 - **INSERT**: Apenas o próprio usuário
@@ -105,19 +105,19 @@ tapaBC2.0/
 
 ---
 
-## 🚀 Funcionalidades
+## Funcionalidades
 
-### 👤 Autenticação
+### Autenticação
 - Cadastro e login com email/senha
 - Sessão persistente
 - Diferenciação usuário comum / administrador
 
-### 🗺️ Reporte de Buracos
+### Reporte de Buracos
 - Captura de localização (GPS ou toque no mapa)
 - Upload de até 3 imagens
 - Seleção de gravidade (Baixa/Média/Alta/Crítica)
 
-### 💬 Feed e Interação
+### Feed e Interação
 - Listagem com filtros (todos/em análise/resolvidos)
 - Sistema de votos (um por usuário)
 - Comentários em reportes
@@ -135,7 +135,7 @@ tapaBC2.0/
 
 ---
 
-## 🔐 Papéis e Permissões
+## Papéis e Permissões
 
 | Funcionalidade | Usuário | Admin |
 |----------------|---------|-------|
@@ -146,7 +146,7 @@ tapaBC2.0/
 
 ---
 
-## 🛠️ Instalação e Execução
+## Instalação e Execução
 
 ### Pré-requisitos
 
@@ -175,13 +175,13 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
 npx expo start -c
 ```
 
-### 📱 Testar no celular
+### Testar no celular
 
 1. Instale o app **Expo Go** (Play Store)
 2. Escaneie o QR Code gerado no terminal
 3. Crie uma conta e comece a reportar
 
-### 👑 Definir um usuário como Admin
+### Definir um usuário como Admin
 
 Execute no SQL Editor do Supabase:
 
@@ -192,7 +192,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@exemplo.com');
 
 ---
 
-## 📊 Funcionalidades Validadas
+## Funcionalidades Validadas
 
 | Cenário | Resultado |
 |---------|-----------|
@@ -205,7 +205,7 @@ WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@exemplo.com');
 
 ---
 
-## 🧠 Decisões Técnicas
+## Decisões Técnicas
 
 ### Por que Supabase em vez de backend próprio?
 - Reduz complexidade (sem gerenciar servidor)
