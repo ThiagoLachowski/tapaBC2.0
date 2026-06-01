@@ -1,6 +1,6 @@
 # Sistema de Mapeamento de Buracos Urbanos
 
-> **Trabalho Acadêmico** - Aplicativo colaborativo para reporte de problemas de infraestrutura urbana
+Aplicativo colaborativo para reporte de problemas de infraestrutura urbana
 
 ---
 
